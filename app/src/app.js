@@ -1,2 +1,5 @@
 const logger = require('logger');
-const config = require('config');
+const TasksQueueService = require('services/tasksQueue.service');
+
+logger.debug('Connecting to tasks queue');
+let tasksQueue = new TasksQueueService();
