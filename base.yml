@@ -1,6 +1,6 @@
 base:
   build: .
-  container_name: doc-writter
+  container_name: doc-orchestrator
   environment:
     NODE_PATH: app/src
 
