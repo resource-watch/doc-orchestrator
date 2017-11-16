@@ -1,5 +1,6 @@
 const logger = require('logger');
-const TasksQueueService = require('services/tasksQueue.service');
 
-logger.debug('Connecting to tasks queue');
-let tasksQueue = new TasksQueueService();
+logger.debug('Initializing doc-orchestrator');
+require('services/tasks-queue.service');
+require('services/status-queue.service');
+require('services/executor-task-queue.service');
