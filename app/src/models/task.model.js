@@ -7,7 +7,7 @@ const TYPE = require('app.constants').TYPE;
 const Task = new Schema({
     _id: { type: String, default: uuidV4 },
     type: { type: String, enum: TYPE, default: 'CREATE' },
-    message: { type: String, required: true, trim: true },
+    message: { type: String, required: false, trim: true },
     status: { type: String, enum: STATUS, default: 'init' },
     reads: { type: Number, min: 0 },
     writes: { type: Number, min: 0 },

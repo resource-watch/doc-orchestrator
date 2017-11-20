@@ -5,7 +5,7 @@ const { promisify } = require('util');
 const { EXECUTOR_TASK_QUEUE } = require('app.constants');
 
 
-class StatusQueueService {
+class ExecutorTaskQueueService {
 
     constructor() {
         logger.info(`Connecting to queue ${EXECUTOR_TASK_QUEUE}`);
@@ -31,7 +31,7 @@ class StatusQueueService {
             const data = await this.channel.assertQueueAsync(EXECUTOR_TASK_QUEUE, {
                 durable: true
             });
-            this.channel.sendToQueue(EXECUTOR_TASK_QUEUE, JSON.stringify(msg));
+            this.channel.sendToQueue(EXECUTOR_TASK_QUEUE, Buffer.from(JSON.stringify(msg)));
         } catch (err) {
             logger.error('Error sending message');
             throw err;
@@ -41,4 +41,4 @@ class StatusQueueService {
 
 }
 
-module.exports = new StatusQueueService();
+module.exports = new ExecutorTaskQueueService();

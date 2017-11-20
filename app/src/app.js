@@ -14,7 +14,9 @@ const onDbReady = (err) => {
     logger.info('Initializing doc-orchestrator');
     require('services/tasks-queue.service');
     require('services/status-queue.service');
-    require('services/executor-task-queue.service');
 };
 
 mongoose.connect(mongoUri, onDbReady);
+process.on('exit', () => {
+    logger.error('Error');
+});
