@@ -46,7 +46,7 @@ class TasksQueueService {
             logger.error(err);
             const retries = msg.fields.deliveryTag;
             if (retries < 1000) {
-                this.channel.ack(msg);
+                this.channel.nack(msg);
             } else {
                 this.channel.ack(msg);
             }
