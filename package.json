@@ -27,9 +27,12 @@
     "supertest": "^3.0.0"
   },
   "dependencies": {
+    "amqplib": "^0.5.2",
     "bluebird": "^3.4.7",
     "bunyan": "^1.8.5",
     "config": "^1.21.0",
-    "amqplib": "^0.5.2"
+    "doc-importer-messages": "git+http://github.com/resource-watch/doc-importer-messages.git#master",
+    "mongoose": "^4.13.4",
+    "uuid": "^3.1.0"
   }
 }

@@ -3,5 +3,7 @@ develop:
     file: base.yml
     service: base
   command: develop
+  environment:
+    MONGO_DATABASE: 'doc-importer-tasks'
   volumes:
     - ./app:/opt/doc-orchestrator/app
