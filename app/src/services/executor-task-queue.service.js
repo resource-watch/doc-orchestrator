@@ -26,14 +26,13 @@ class ExecutorTaskQueueService {
     }
 
     async sendMessage(msg) {
+        logger.info('Sending message to EXECUTOR_TASK_QUEUE', msg);
         try {
-            logger.info('Sending message', msg);
-            const data = await this.channel.assertQueueAsync(EXECUTOR_TASK_QUEUE, {
-                durable: true
-            });
+            // Sending to queue
+            await this.channel.assertQueueAsync(EXECUTOR_TASK_QUEUE, { durable: true });
             this.channel.sendToQueue(EXECUTOR_TASK_QUEUE, Buffer.from(JSON.stringify(msg)));
         } catch (err) {
-            logger.error('Error sending message');
+            logger.error('Error sending message to Executor Task Queue');
             throw err;
         }
     }

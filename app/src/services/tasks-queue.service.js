@@ -1,10 +1,10 @@
 const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib/callback_api');
-const { TASKS_QUEUE } = require('app.constants');
 const TaskService = require('services/task.service');
+const { task, execution } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
-const message = require('doc-importer-messages');
+const { TASKS_QUEUE } = require('app.constants');
 
 class TasksQueueService {
 
@@ -31,19 +31,49 @@ class TasksQueueService {
         });
     }
 
+    formExecutionMessage(msg) {
+        // Create the message
+        let executorTaskMessage;
+        switch (msg.type) {
+
+        case task.MESSAGE_TYPES.TASK_CREATE:
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, msg);
+            break;
+        case task.MESSAGE_TYPES.TASK_CONCAT:
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, msg);
+            break;
+        case task.MESSAGE_TYPES.TASK_DELETE:
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, msg);
+            break;
+        case task.MESSAGE_TYPES.TASK_OVERWRITE:
+            // @TODO add EXECUTION_DELETE_INDEX message
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, msg);
+            break;
+        default:
+            logger.info('Default');
+
+        }
+        return executorTaskMessage;
+    }
+
     async consume(msg) {
         logger.info('Message received from TASKS QUEUE', msg);
+        const msgContent = JSON.parse(msg.content.toString());
+        let taskEntity;
         try {
-            const taskMessage = JSON.parse(msg.content.toString());
-            // 1. Create the message
-            const executorTaskMessage = message(taskMessage.type, taskMessage);
-            // 2. Create mongo entity
-            await TaskService.create(executorTaskMessage);
-            // 3. Send the message to ExecutorTaskQueue
+            // Create mongo task entity
+            taskEntity = await TaskService.create(msgContent);
+            // Generate message
+            const executorTaskMessage = this.formExecutionMessage(taskEntity);
+            // Send Message ExecutorTask Queue
             await ExecutorTaskQueueService.sendMessage(executorTaskMessage);
+            // All OK -> msg sent, so ack emitted
             this.channel.ack(msg);
         } catch (err) {
+            // Error creating entity or sending to queue
             logger.error(err);
+            // Delete mongo task entity
+            await TaskService.delete(taskEntity._id);
             const retries = msg.fields.deliveryTag;
             if (retries < 1000) {
                 this.channel.nack(msg);
