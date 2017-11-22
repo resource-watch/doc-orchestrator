@@ -21,9 +21,8 @@ class TaskService {
         logger.info(`[DBACCESS-SAVE]: new ${taskData.type} task`);
         const task = await new Task({
             _id: taskData.id,
-            type: taskData.name,
-            status: taskData.status,
-            message: taskData.message,
+            type: taskData.type,
+            message: taskData,
             reads: 0,
             writes: 0
         }).save();
@@ -35,7 +34,6 @@ class TaskService {
         logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         task.status = taskData.status || task.status;
-        task.message = taskData.message || task.message;
         task.reads = taskData.reads || task.reads;
         task.writes = taskData.writes || task.writes;
         logger.info(`[DBACCESS-SAVE]: update task.id ${id}`);

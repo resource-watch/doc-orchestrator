@@ -31,23 +31,25 @@ class TasksQueueService {
         });
     }
 
-    formExecutionMessage(msg) {
+    formExecutionMessage(taskMsg) {
         // Create the message
         let executorTaskMessage;
-        switch (msg.type) {
+        // Adding taskId
+        taskMsg.taskId = taskMsg.id;
+        switch (taskMsg.type) {
 
         case task.MESSAGE_TYPES.TASK_CREATE:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, msg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_CONCAT:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, msg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_DELETE:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, msg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_OVERWRITE:
             // first step is delete the index, then we will catch the STATUS_INDEX_DELETED to create the new INDEX
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, msg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, taskMsg);
             break;
         default:
             logger.info('Default');
@@ -58,24 +60,25 @@ class TasksQueueService {
 
     async consume(msg) {
         logger.info('Message received from TASKS QUEUE', msg);
-        const msgContent = JSON.parse(msg.content.toString());
+        const taskMsg = JSON.parse(msg.content.toString());
         let taskEntity;
         try {
             // Create mongo task entity
-            taskEntity = await TaskService.create(msgContent);
+            taskEntity = await TaskService.create(taskMsg);
             // Generate message
-            const executorTaskMessage = this.formExecutionMessage(taskEntity);
+            const executorTaskMessage = this.formExecutionMessage(taskMsg);
             // Send Message ExecutorTask Queue
             await ExecutorTaskQueueService.sendMessage(executorTaskMessage);
             // All OK -> msg sent, so ack emitted
             this.channel.ack(msg);
+            logger.debug('msg accepted');
         } catch (err) {
             // Error creating entity or sending to queue
             logger.error(err);
             // Delete mongo task entity
             await TaskService.delete(taskEntity._id);
             const retries = msg.fields.deliveryTag;
-            if (retries < 1000) {
+            if (retries < 100) {
                 this.channel.nack(msg);
             } else {
                 this.channel.ack(msg);
