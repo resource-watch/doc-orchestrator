@@ -46,7 +46,7 @@ class TasksQueueService {
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, msg);
             break;
         case task.MESSAGE_TYPES.TASK_OVERWRITE:
-            // @TODO add EXECUTION_DELETE_INDEX message
+            // first step is delete the index, then we will catch the STATUS_INDEX_DELETED to create the new INDEX
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, msg);
             break;
         default:

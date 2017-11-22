@@ -2,12 +2,15 @@ const STATUS_QUEUE = 'DOC-STATUS';
 const TASKS_QUEUE = 'DOC-TASKS';
 const EXECUTOR_TASK_QUEUE = 'DOC-EXECUTOR-TASKS';
 
-// @TODO
 const STATUS = {
-    init: 'init',
-    pending: 'pending',
-    failed: 'failed',
-    saved: 'saved'
+    INIT: 'INIT',
+    INDEX_CREATED: 'INDEX_CREATED',
+    READ: 'READ',
+    WRITTEN: 'WRITTEN',
+    PERFORMED_DELETE_QUERY: 'PERFORMED_DELETE_QUERY',
+    FINISHED_DELETE_QUERY: 'FINISHED_DELETE_QUERY',
+    INDEX_DELETED: 'INDEX_DELETED',
+    SAVED: 'SAVED'
 };
 
 module.exports = {

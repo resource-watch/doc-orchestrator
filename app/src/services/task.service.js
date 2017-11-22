@@ -1,6 +1,7 @@
 const logger = require('logger');
 const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
+const STATUS = require('app.constants').STATUS;
 
 class TaskService {
 
@@ -87,10 +88,14 @@ class TaskService {
         return task;
     }
 
-    static next(id) {
-        // @TODO
-        // check for next actions to do based on the status?
-        logger.info(id);
+    static async checkCounter(id) {
+        logger.debug(`[TaskService]: checking counter of task with id:  ${id}`);
+        logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
+        const task = await TaskService.get(id);
+        if ((task.writes - task.reads === 0) && (task.status === STATUS.READ)) {
+            return true;
+        }
+        return false;
     }
 
 }

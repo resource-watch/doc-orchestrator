@@ -2,7 +2,8 @@ const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib/callback_api');
 const TaskService = require('services/task.service');
-const { status } = require('doc-importer-messages');
+const { execution, status } = require('doc-importer-messages');
+const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const { STATUS_QUEUE } = require('app.constants');
 const STATUS = require('app.constants').STATUS;
 
@@ -32,41 +33,62 @@ class StatusQueueService {
         });
     }
 
+    async processMessage(statusMsg) {
+        // Sometimes it will get the task from Mongo (we will need it to compare the current state in
+        // cases of fork)
+        // const task = await TaskService.get(status.Msg.taskId);
+        switch (statusMsg.type) {
+
+        case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
+            // From INIT to INDEX_CREATED
+            await TaskService.updateStatus(STATUS.INDEX_CREATED);
+            break;
+        case status.MESSAGE_TYPES.STATUS_READ_DATA:
+            // Executor says that it's read a piece of data
+            await TaskService.addRead(statusMsg.taskId);
+            break;
+        case status.MESSAGE_TYPES.STATUS_READ_FILE:
+            // The file has been read completely, just update the status
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.READ);
+            break;
+        case status.MESSAGE_TYPES.STATUS_WRITTEN_DATA: {
+            // add write +1
+            await TaskService.addWrite(statusMsg.taskId);
+            // AND NOW CHECK IF WRITES-READS == 0 and STATUS == READ
+            const finished = await TaskService.checkCounter(statusMsg.taskId);
+            if (finished) {
+                // @TODO send message to status queue going to saved status?? directly?
+            }
+            break;
+        }
+        case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY:
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.PERFORMED_DELETE_QUERY);
+            break;
+        case status.MESSAGE_TYPES.FINISHED_DELETE_QUERY:
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.FINISHED_DELETE_QUERY);
+            // @TODO send message to status queue going to saved status?? directly?
+            break;
+        case status.MESSAGE_TYPES.INDEX_DELETED: {
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_DELETED);
+            // Sending a create message to execution queue
+            const task = await TaskService.get(statusMsg.taskId);
+            const executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, task);
+            await ExecutorTaskQueueService.sendMessage(executorTaskMessage);
+            break;
+        }
+        default:
+            logger.info('do nothing?');
+
+        }
+    }
+
     async consume(msg) {
         logger.info('Message received', msg);
         const statusMsg = JSON.parse(msg.content.toString());
         try {
-            switch (statusMsg.type) {
-
-            case status.MESSAGE_TYPES.STATUS_READ:
-                await TaskService.addRead(status.taskId);
-                break;
-            case status.MESSAGE_TYPES.STATUS_WRITE:
-                await TaskService.addWrite(status.taskId);
-                break;
-            case status.MESSAGE_TYPES.START_READING:
-                await TaskService.updateStatus(status.taskId, STATUS.start_reading);
-                break;
-            case status.MESSAGE_TYPES.FINISH_READING:
-                await TaskService.updateStatus(status.taskId, STATUS.finish_reading);
-                break;
-            case status.MESSAGE_TYPES.STATUS_CHECK_DELETE:
-                // @TODO
-                break;
-            case status.MESSAGE_TYPES.DELETED_INDEX:
-                // @TODO we gotta add this msg type
-                // We always update the entity and after that we will check the status and
-                // do whatever we need to do
-                await TaskService.updateStatus(status.taskId, STATUS.deleted_index);
-                break;
-            default:
-                logger.info('do nothing?');
-
-            }
+            await this.processMessage(statusMsg);
             // The message has been accepted.
             this.channel.ack(msg);
-            // Now we still need to trigger something.
-            await TaskService.next(status.taskId);
         } catch (err) {
             // Error creating entity or sending to queue
             logger.error(err);
