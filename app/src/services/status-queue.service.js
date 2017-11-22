@@ -2,7 +2,8 @@ const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib/callback_api');
 const TaskService = require('services/task.service');
-const { execution, status } = require('doc-importer-messages');
+const DatasetService = require('services/task.service');
+const { execution, status, task } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const { STATUS_QUEUE } = require('app.constants');
 const STATUS = require('app.constants').STATUS;
@@ -33,10 +34,15 @@ class StatusQueueService {
         });
     }
 
+    async generateExecutionTask(id, type) {
+        const currentTask = await TaskService.get(id);
+        return execution.createMessage(type, currentTask);
+    }
+
     async processMessage(statusMsg) {
         // Sometimes it will get the task from Mongo (we will need it to compare the current state in
         // cases of fork)
-        // const task = await TaskService.get(status.Msg.taskId);
+        // const task = await TaskService.get(statusMsg.taskId);
         switch (statusMsg.type) {
 
         case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
@@ -57,25 +63,36 @@ class StatusQueueService {
             // AND NOW CHECK IF WRITES-READS == 0 and STATUS == READ
             const finished = await TaskService.checkCounter(statusMsg.taskId);
             if (finished) {
-                // @TODO send message to status queue going to saved status?? directly?
+                // Sending confirm index creation
+                await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_INDEX_CREATION));
             }
             break;
         }
         case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY:
             await TaskService.updateStatus(statusMsg.taskId, STATUS.PERFORMED_DELETE_QUERY);
             break;
-        case status.MESSAGE_TYPES.FINISHED_DELETE_QUERY:
+        case status.MESSAGE_TYPES.STATUS_FINISHED_DELETE_QUERY:
             await TaskService.updateStatus(statusMsg.taskId, STATUS.FINISHED_DELETE_QUERY);
-            // @TODO send message to status queue going to saved status?? directly?
+            // update dataset
+            await DatasetService.updateStatus();
             break;
-        case status.MESSAGE_TYPES.INDEX_DELETED: {
+        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED: {
             await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_DELETED);
-            // Sending a create message to execution queue
-            const task = await TaskService.get(statusMsg.taskId);
-            const executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, task);
-            await ExecutorTaskQueueService.sendMessage(executorTaskMessage);
+            const currentTask = await TaskService.get(statusMsg.taskId);
+            // From delete index operation or OVERWRITE?
+            if (currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) {
+                // delete index
+                await DatasetService.updateStatus();
+            } else {
+                // it comes from an OVERWRITE OPERATION, we gotta launch a create Task
+                // Sending a create message to execution queue
+                await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CREATE));
+            }
             break;
         }
+        case status.MESSAGE_TYPES.STATUS_INDEX_CONFIRMED:
+            await DatasetService.updateStatus();
+            break;
         default:
             logger.info('do nothing?');
 
