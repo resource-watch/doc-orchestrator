@@ -1,7 +1,6 @@
 const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib');
-const { promisify } = require('util');
 const { EXECUTOR_TASK_QUEUE } = require('app.constants');
 
 
@@ -23,15 +22,15 @@ class ExecutorTaskQueueService {
 
     async init() {
         const conn = await amqp.connect(config.get('rabbitmq.url'));
-        this.channel = await conn.createConfirmChannel();
-        this.channel.assertQueueAsync = promisify(this.channel.assertQueue);
+        this.channel = await conn.createChannel();
+
     }
 
     async sendMessage(msg) {
         logger.info('Sending message to EXECUTOR_TASK_QUEUE', msg);
         try {
             // Sending to queue
-            await this.channel.assertQueueAsync(EXECUTOR_TASK_QUEUE, { durable: true });
+            await this.channel.assertQueue(EXECUTOR_TASK_QUEUE, { durable: true });
             this.channel.sendToQueue(EXECUTOR_TASK_QUEUE, Buffer.from(JSON.stringify(msg)));
         } catch (err) {
             logger.error('Error sending message to Executor Task Queue');

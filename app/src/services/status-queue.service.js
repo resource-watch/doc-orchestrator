@@ -68,7 +68,7 @@ class StatusQueueService {
             const finished = await TaskService.checkCounter(statusMsg.taskId);
             if (finished) {
                 // Sending confirm index creation
-                await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_INDEX_CREATION));
+                await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT));
             }
             break;
         }
@@ -94,7 +94,7 @@ class StatusQueueService {
             }
             break;
         }
-        case status.MESSAGE_TYPES.STATUS_INDEX_CONFIRMED:
+        case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
             await DatasetService.updateStatus();
             break;
         default:
