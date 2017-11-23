@@ -1,6 +1,6 @@
 const logger = require('logger');
 const config = require('config');
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 const TaskService = require('services/task.service');
 const DatasetService = require('services/task.service');
 const { execution, status, task } = require('doc-importer-messages');
@@ -12,25 +12,29 @@ class StatusQueueService {
 
     constructor() {
         logger.info(`Connecting to queue ${STATUS_QUEUE}`);
-        amqp.connect(config.get('rabbitmq.url'), (err, conn) => {
-            if (err) {
+        try {
+            this.init().then(() => {
+                logger.info('Connected');
+            }, (err) => {
                 logger.error(err);
                 process.exit(1);
-            }
-            conn.createChannel((err, ch) => {
-                const q = STATUS_QUEUE;
-                this.channel = ch;
-                ch.assertQueue(q, {
-                    durable: true,
-                    maxLength: 10
-                });
-                ch.prefetch(1);
-
-                logger.info(` [*] Waiting for messages in ${q}`);
-                ch.consume(q, this.consume.bind(this), {
-                    noAck: false
-                });
             });
+        } catch (err) {
+            logger.error(err);
+        }
+    }
+
+    async init() {
+        const conn = await amqp.connect(config.get('rabbitmq.url'));
+        this.channel = await conn.createConfirmChannel();
+        const q = STATUS_QUEUE;
+        this.channel.assertQueue(q, {
+            durable: true
+        });
+        this.channel.prefetch(1);
+        logger.info(` [*] Waiting for messages in ${q}`);
+        this.channel.consume(q, this.consume.bind(this), {
+            noAck: false
         });
     }
 

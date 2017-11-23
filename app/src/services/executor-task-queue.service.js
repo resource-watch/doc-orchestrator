@@ -1,6 +1,6 @@
 const logger = require('logger');
 const config = require('config');
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 const { promisify } = require('util');
 const { EXECUTOR_TASK_QUEUE } = require('app.constants');
 
@@ -9,20 +9,22 @@ class ExecutorTaskQueueService {
 
     constructor() {
         logger.info(`Connecting to queue ${EXECUTOR_TASK_QUEUE}`);
-        amqp.connect(config.get('rabbitmq.url'), (err, conn) => {
-            if (err) {
+        try {
+            this.init().then(() => {
+                logger.info('Connected');
+            }, (err) => {
                 logger.error(err);
                 process.exit(1);
-            }
-            conn.createConfirmChannel((err, ch) => {
-                if (err) {
-                    logger.error(err);
-                    process.exit(1);
-                }
-                this.channel = ch;
-                this.channel.assertQueueAsync = promisify(this.channel.assertQueue);
             });
-        });
+        } catch (err) {
+            logger.error(err);
+        }
+    }
+
+    async init() {
+        const conn = await amqp.connect(config.get('rabbitmq.url'));
+        this.channel = await conn.createConfirmChannel();
+        this.channel.assertQueueAsync = promisify(this.channel.assertQueue);
     }
 
     async sendMessage(msg) {
