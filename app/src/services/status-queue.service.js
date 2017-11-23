@@ -51,7 +51,7 @@ class StatusQueueService {
 
         case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
             // From INIT to INDEX_CREATED
-            await TaskService.updateStatus(STATUS.INDEX_CREATED);
+            await TaskService.updateStatus(statusMsg.taskId);
             break;
         case status.MESSAGE_TYPES.STATUS_READ_DATA:
             // Executor says that it's read a piece of data
@@ -114,7 +114,7 @@ class StatusQueueService {
             // Error creating entity or sending to queue
             logger.error(err);
             const retries = msg.fields.deliveryTag;
-            if (retries < 1000) {
+            if (retries < 10) {
                 this.channel.nack(msg);
             } else {
                 this.channel.ack(msg);

@@ -83,7 +83,7 @@ class TasksQueueService {
             // Delete mongo task entity
             await TaskService.delete(taskEntity._id);
             const retries = msg.fields.deliveryTag;
-            if (retries < 100) {
+            if (retries < 10) {
                 this.channel.nack(msg);
             } else {
                 this.channel.ack(msg);
