@@ -2,7 +2,7 @@ const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib');
 const TaskService = require('services/task.service');
-const DatasetService = require('services/task.service');
+const DatasetService = require('services/dataset.service');
 const { execution, status, task } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const { STATUS_QUEUE } = require('app.constants');
@@ -38,9 +38,12 @@ class StatusQueueService {
         });
     }
 
-    async generateExecutionTask(id, type) {
-        const currentTask = await TaskService.get(id);
-        return execution.createMessage(type, currentTask);
+    async generateExecutionTask(taskId, type) {
+        const currentTask = await TaskService.get(taskId);
+        return execution.createMessage(type, {
+            taskId,
+            index: currentTask.index
+        });
     }
 
     async processMessage(statusMsg) {
@@ -51,6 +54,7 @@ class StatusQueueService {
 
         case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
             // From INIT to INDEX_CREATED
+            // update the index that it's in index attribute in the message
             await TaskService.updateStatus(statusMsg.taskId);
             break;
         case status.MESSAGE_TYPES.STATUS_READ_DATA:
@@ -60,6 +64,12 @@ class StatusQueueService {
         case status.MESSAGE_TYPES.STATUS_READ_FILE:
             // The file has been read completely, just update the status
             await TaskService.updateStatus(statusMsg.taskId, STATUS.READ);
+            const finished = await TaskService.checkCounter(statusMsg.taskId);
+            if (finished) {
+                // Sending confirm index creation
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT);
+                await ExecutorTaskQueueService.sendMessage(message);
+            }
             break;
         case status.MESSAGE_TYPES.STATUS_WRITTEN_DATA: {
             // add write +1
@@ -68,7 +78,8 @@ class StatusQueueService {
             const finished = await TaskService.checkCounter(statusMsg.taskId);
             if (finished) {
                 // Sending confirm index creation
-                await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT));
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT);
+                await ExecutorTaskQueueService.sendMessage(message);
             }
             break;
         }
@@ -80,12 +91,14 @@ class StatusQueueService {
             // update dataset
             await DatasetService.updateStatus();
             break;
-        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED: {
+        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED:
+            logger.debug(`[STATUS-QUEUE-SERVICE] Received ${status.MESSAGE_TYPES.STATUS_INDEX_DELETED}`);
             await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_DELETED);
             const currentTask = await TaskService.get(statusMsg.taskId);
             // From delete index operation or OVERWRITE?
             if (currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) {
                 // delete index
+                logger.debug('[STATUS-QUEUE-SERVICE] its a TASK_DELETE_INDEX');
                 await DatasetService.updateStatus();
             } else {
                 // it comes from an OVERWRITE OPERATION, we gotta launch a create Task
@@ -93,7 +106,7 @@ class StatusQueueService {
                 await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CREATE));
             }
             break;
-        }
+        
         case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
             await DatasetService.updateStatus();
             break;

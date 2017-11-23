@@ -13,7 +13,8 @@ const Task = new Schema({
     reads: { type: Number, min: 0, default: 0 },
     writes: { type: Number, min: 0, default: 0 },
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    updatedAt: { type: Date, default: Date.now },
+    index: { type: String, trim: true }
 });
 
 module.exports = mongoose.model('Task', Task);
