@@ -9,7 +9,8 @@ const { TASKS_QUEUE } = require('app.constants');
 class TasksQueueService {
 
     constructor() {
-        logger.info(`Connecting to queue ${TASKS_QUEUE}`);
+        this.q = TASKS_QUEUE;
+        logger.info(`Connecting to queue ${this.q}`);
         try {
             this.init().then(() => {
                 logger.info('Connected');
@@ -25,15 +26,25 @@ class TasksQueueService {
     async init() {
         const conn = await amqp.connect(config.get('rabbitmq.url'));
         this.channel = await conn.createConfirmChannel();
-        const q = TASKS_QUEUE;
-        this.channel.assertQueue(q, {
-            durable: true
-        });
+        await this.channel.assertQueue(this.q, { durable: true });
         this.channel.prefetch(1);
-        logger.info(` [*] Waiting for messages in ${q}`);
-        this.channel.consume(q, this.consume.bind(this), {
+        logger.info(` [*] Waiting for messages in ${this.q}`);
+        this.channel.consume(this.q, this.consume.bind(this), {
             noAck: false
         });
+    }
+
+    async returnMsg(msg) {
+        logger.info(`Sending message to ${this.q}`);
+        try {
+            // Sending to queue
+            let count = msg.properties.headers['x-redelivered-count'] || 0;
+            count += 1;
+            this.channel.sendToQueue(this.q, msg.content, { headers: { 'x-redelivered-count': count } });
+        } catch (err) {
+            logger.error(`Error sending message to ${this.q}`);
+            throw err;
+        }
     }
 
     formExecutionMessage(taskMsg) {
@@ -83,13 +94,13 @@ class TasksQueueService {
         } catch (err) {
             // Error creating entity or sending to queue
             logger.error(err);
+            // Accept the message
+            this.channel.ack(msg);
             // Delete mongo task entity
             await TaskService.delete(taskEntity._id);
-            const retries = msg.fields.deliveryTag;
+            const retries = msg.properties.headers['x-redelivered-count'] || 0;
             if (retries < 10) {
-                this.channel.nack(msg);
-            } else {
-                this.channel.ack(msg);
+                this.returnMsg(msg);
             }
         }
     }

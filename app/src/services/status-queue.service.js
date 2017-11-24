@@ -11,7 +11,8 @@ const STATUS = require('app.constants').STATUS;
 class StatusQueueService {
 
     constructor() {
-        logger.info(`Connecting to queue ${STATUS_QUEUE}`);
+        this.q = STATUS_QUEUE;
+        logger.info(`Connecting to queue ${this.q}`);
         try {
             this.init().then(() => {
                 logger.info('Connected');
@@ -27,15 +28,25 @@ class StatusQueueService {
     async init() {
         const conn = await amqp.connect(config.get('rabbitmq.url'));
         this.channel = await conn.createConfirmChannel();
-        const q = STATUS_QUEUE;
-        this.channel.assertQueue(q, {
-            durable: true
-        });
+        await this.channel.assertQueue(this.q, { durable: true });
         this.channel.prefetch(1);
-        logger.info(` [*] Waiting for messages in ${q}`);
-        this.channel.consume(q, this.consume.bind(this), {
+        logger.info(` [*] Waiting for messages in ${this.q}`);
+        this.channel.consume(this.q, this.consume.bind(this), {
             noAck: false
         });
+    }
+
+    async returnMsg(msg) {
+        logger.info(`Sending message to ${this.q}`);
+        try {
+            // Sending to queue
+            let count = msg.properties.headers['x-redelivered-count'] || 0;
+            count += 1;
+            this.channel.sendToQueue(this.q, msg.content, { headers: { 'x-redelivered-count': count } });
+        } catch (err) {
+            logger.error(`Error sending message to ${this.q}`);
+            throw err;
+        }
     }
 
     async generateExecutionTask(taskId, type) {
@@ -46,13 +57,14 @@ class StatusQueueService {
         if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT) {
             contentMsg.index = currentTask.index;
         }
+        if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE) {
+            contentMsg.elasticTaskId = currentTask.elasticTaskId;
+        }
         return execution.createMessage(type, contentMsg);
     }
 
     async processMessage(statusMsg) {
-        // Sometimes it will get the task from Mongo (we will need it to compare the current state in
-        // cases of fork)
-        // const task = await TaskService.get(statusMsg.taskId);
+
         switch (statusMsg.type) {
 
         case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
@@ -89,12 +101,17 @@ class StatusQueueService {
             }
             break;
         }
-        case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY:
+        case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY: {
             await TaskService.updateStatus(statusMsg.taskId, STATUS.PERFORMED_DELETE_QUERY);
+            await TaskService.updateElasticTaskId(statusMsg.taskId, statusMsg.elasticTaskId);
+            const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE);
+            await ExecutorTaskQueueService.sendMessage(message);
             break;
+        }
         case status.MESSAGE_TYPES.STATUS_FINISHED_DELETE_QUERY:
             await TaskService.updateStatus(statusMsg.taskId, STATUS.FINISHED_DELETE_QUERY);
             // update dataset
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
             await DatasetService.updateStatus();
             break;
         case status.MESSAGE_TYPES.STATUS_INDEX_DELETED: {
@@ -105,6 +122,7 @@ class StatusQueueService {
             if (currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) {
                 // delete index
                 logger.debug('[STATUS-QUEUE-SERVICE] its a TASK_DELETE_INDEX');
+                await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
                 await DatasetService.updateStatus();
             } else {
                 // it comes from an OVERWRITE OPERATION, we gotta launch a create Task
@@ -115,6 +133,11 @@ class StatusQueueService {
         }
         case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
             await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
+            await DatasetService.updateStatus();
+            break;
+        case status.MESSAGE_TYPES.STATUS_ERROR:
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.ERROR);
+            await TaskService.updateError(statusMsg.taskId, statusMsg.error);
             await DatasetService.updateStatus();
             break;
         default:
@@ -130,14 +153,15 @@ class StatusQueueService {
             await this.processMessage(statusMsg);
             // The message has been accepted.
             this.channel.ack(msg);
+            logger.debug('msg accepted');
         } catch (err) {
             // Error creating entity or sending to queue
             logger.error(err);
-            const retries = msg.fields.deliveryTag;
+            // Accept the message
+            this.channel.ack(msg);
+            const retries = msg.properties.headers['x-redelivered-count'] || 0;
             if (retries < 10) {
-                this.channel.nack(msg);
-            } else {
-                this.channel.ack(msg);
+                this.returnMsg(msg);
             }
         }
     }

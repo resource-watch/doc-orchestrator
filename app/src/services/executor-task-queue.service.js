@@ -3,11 +3,11 @@ const config = require('config');
 const amqp = require('amqplib');
 const { EXECUTOR_TASK_QUEUE } = require('app.constants');
 
-
 class ExecutorTaskQueueService {
 
     constructor() {
-        logger.info(`Connecting to queue ${EXECUTOR_TASK_QUEUE}`);
+        this.q = EXECUTOR_TASK_QUEUE;
+        logger.info(`Connecting to queue ${this.q}`);
         try {
             this.init().then(() => {
                 logger.info('Connected');
@@ -23,21 +23,19 @@ class ExecutorTaskQueueService {
     async init() {
         const conn = await amqp.connect(config.get('rabbitmq.url'));
         this.channel = await conn.createChannel();
-
+        await this.channel.assertQueue(this.q, { durable: true });
     }
 
     async sendMessage(msg) {
-        logger.info('Sending message to EXECUTOR_TASK_QUEUE', msg);
+        logger.info(`Sending message to ${this.q}`, msg);
         try {
             // Sending to queue
-            await this.channel.assertQueue(EXECUTOR_TASK_QUEUE, { durable: true });
-            this.channel.sendToQueue(EXECUTOR_TASK_QUEUE, Buffer.from(JSON.stringify(msg)));
+            this.channel.sendToQueue(this.q, Buffer.from(JSON.stringify(msg)));
         } catch (err) {
-            logger.error('Error sending message to Executor Task Queue');
+            logger.error(`Error sending message to ${this.q}`);
             throw err;
         }
     }
-
 
 }
 

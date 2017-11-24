@@ -96,6 +96,26 @@ class TaskService {
         return task;
     }
 
+    static async updateElasticTaskId(id, elasticTaskId) {
+        logger.debug(`[TaskService]: update elasticTaskId in task with id:  ${id}`);
+        logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
+        let task = await TaskService.get(id);
+        task.elasticTaskId = elasticTaskId;
+        logger.info(`[DBACCESS-SAVE]: update task.id ${id}`);
+        task = await task.save();
+        return task;
+    }
+
+    static async updateError(id, error) {
+        logger.debug(`[TaskService]: update error in task with id:  ${id}`);
+        logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
+        let task = await TaskService.get(id);
+        task.error = error;
+        logger.info(`[DBACCESS-SAVE]: update task.id ${id}`);
+        task = await task.save();
+        return task;
+    }
+
     static async checkCounter(id) {
         logger.debug(`[TaskService]: checking counter of task with id:  ${id}`);
         logger.info(`[DBACCESS-FIND]: task.id: ${id}`);

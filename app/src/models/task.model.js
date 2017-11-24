@@ -14,7 +14,9 @@ const Task = new Schema({
     writes: { type: Number, min: 0, default: 0 },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-    index: { type: String, trim: true }
+    index: { type: String, trim: true },
+    elasticTaskId: { type: String, trim: true },
+    error: { type: String, trim: true }
 });
 
 module.exports = mongoose.model('Task', Task);

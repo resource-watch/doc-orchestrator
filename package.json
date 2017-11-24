@@ -33,6 +33,10 @@
     "config": "^1.21.0",
     "doc-importer-messages": "git+http://github.com/resource-watch/doc-importer-messages.git#master",
     "mongoose": "^4.13.4",
-    "uuid": "^3.1.0"
+    "uuid": "^3.1.0",
+    "koa": "^2.0.0",
+    "koa-logger": "^2.0.0",
+    "koa-mount": "^2.0.0",
+    "koa-router": "^7.0.1"
   }
 }
