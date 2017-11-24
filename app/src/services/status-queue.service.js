@@ -40,10 +40,13 @@ class StatusQueueService {
 
     async generateExecutionTask(taskId, type) {
         const currentTask = await TaskService.get(taskId);
-        return execution.createMessage(type, {
-            taskId,
-            index: currentTask.index
-        });
+        const contentMsg = {
+            taskId
+        };
+        if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT) {
+            contentMsg.index = currentTask.index;
+        }
+        return execution.createMessage(type, contentMsg);
     }
 
     async processMessage(statusMsg) {
@@ -55,13 +58,15 @@ class StatusQueueService {
         case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
             // From INIT to INDEX_CREATED
             // update the index that it's in index attribute in the message
-            await TaskService.updateStatus(statusMsg.taskId);
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_CREATED);
+            await TaskService.updateIndex(statusMsg.taskId, statusMsg.index);
+            await DatasetService.updateIndex();
             break;
         case status.MESSAGE_TYPES.STATUS_READ_DATA:
             // Executor says that it's read a piece of data
             await TaskService.addRead(statusMsg.taskId);
             break;
-        case status.MESSAGE_TYPES.STATUS_READ_FILE:
+        case status.MESSAGE_TYPES.STATUS_READ_FILE: {
             // The file has been read completely, just update the status
             await TaskService.updateStatus(statusMsg.taskId, STATUS.READ);
             const finished = await TaskService.checkCounter(statusMsg.taskId);
@@ -71,6 +76,7 @@ class StatusQueueService {
                 await ExecutorTaskQueueService.sendMessage(message);
             }
             break;
+        }
         case status.MESSAGE_TYPES.STATUS_WRITTEN_DATA: {
             // add write +1
             await TaskService.addWrite(statusMsg.taskId);
@@ -91,7 +97,7 @@ class StatusQueueService {
             // update dataset
             await DatasetService.updateStatus();
             break;
-        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED:
+        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED: {
             logger.debug(`[STATUS-QUEUE-SERVICE] Received ${status.MESSAGE_TYPES.STATUS_INDEX_DELETED}`);
             await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_DELETED);
             const currentTask = await TaskService.get(statusMsg.taskId);
@@ -106,8 +112,9 @@ class StatusQueueService {
                 await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CREATE));
             }
             break;
-        
+        }
         case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
             await DatasetService.updateStatus();
             break;
         default:

@@ -6,6 +6,10 @@ class DatasetService {
         logger.debug('Updating dataset');
     }
 
+    static async updateIndex() {
+        logger.debug('Updating index of dataset');
+    }
+
 }
 
 module.exports = DatasetService;

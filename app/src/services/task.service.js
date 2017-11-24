@@ -86,6 +86,16 @@ class TaskService {
         return task;
     }
 
+    static async updateIndex(id, index) {
+        logger.debug(`[TaskService]: update index in task with id:  ${id} and index: ${index}`);
+        logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
+        let task = await TaskService.get(id);
+        task.index = index;
+        logger.info(`[DBACCESS-SAVE]: update task.id ${id}`);
+        task = await task.save();
+        return task;
+    }
+
     static async checkCounter(id) {
         logger.debug(`[TaskService]: checking counter of task with id:  ${id}`);
         logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
