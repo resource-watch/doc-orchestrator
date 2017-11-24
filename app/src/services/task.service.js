@@ -24,7 +24,9 @@ class TaskService {
             type: taskData.type,
             message: taskData,
             reads: 0,
-            writes: 0
+            writes: 0,
+            index: taskData.index,
+            datasetId: taskData.datasetId
         }).save();
         return task;
     }
@@ -87,7 +89,7 @@ class TaskService {
     }
 
     static async updateIndex(id, index) {
-        logger.debug(`[TaskService]: update index in task with id:  ${id} and index: ${index}`);
+        logger.debug(`[TaskService]: update index in task with id: ${id} and index: ${index}`);
         logger.info(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         task.index = index;

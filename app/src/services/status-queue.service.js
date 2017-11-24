@@ -51,7 +51,7 @@ class StatusQueueService {
 
     async generateExecutionTask(taskId, type) {
         const currentTask = await TaskService.get(taskId);
-        const contentMsg = {
+        let contentMsg = {
             taskId
         };
         if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT) {
@@ -59,6 +59,10 @@ class StatusQueueService {
         }
         if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE) {
             contentMsg.elasticTaskId = currentTask.elasticTaskId;
+        }
+        if (type === execution.MESSAGE_TYPES.EXECUTION_CREATE) {
+            contentMsg = Object.assign({}, contentMsg, currentTask.message);            
+            contentMsg.datasetId = currentTask.datasetId;
         }
         return execution.createMessage(type, contentMsg);
     }
@@ -127,7 +131,8 @@ class StatusQueueService {
             } else {
                 // it comes from an OVERWRITE OPERATION, we gotta launch a create Task
                 // Sending a create message to execution queue
-                await ExecutorTaskQueueService.sendMessage(this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CREATE));
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CREATE);
+                await ExecutorTaskQueueService.sendMessage(message);
             }
             break;
         }

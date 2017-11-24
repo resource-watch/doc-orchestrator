@@ -16,6 +16,7 @@ const Task = new Schema({
     updatedAt: { type: Date, default: Date.now },
     index: { type: String, trim: true },
     elasticTaskId: { type: String, trim: true },
+    datasetId: { type: String, trim: true },
     error: { type: String, trim: true }
 });
 

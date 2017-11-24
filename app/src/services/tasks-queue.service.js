@@ -42,7 +42,7 @@ class TasksQueueService {
             count += 1;
             this.channel.sendToQueue(this.q, msg.content, { headers: { 'x-redelivered-count': count } });
         } catch (err) {
-            logger.error(`Error sending message to ${this.q}`);
+            logger.error(`Error sending message to  ${this.q}`);
             throw err;
         }
     }
@@ -61,6 +61,7 @@ class TasksQueueService {
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_DELETE:
+            logger.debug(taskMsg);
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_OVERWRITE:
@@ -80,6 +81,7 @@ class TasksQueueService {
     async consume(msg) {
         logger.info('Message received from TASKS QUEUE', msg);
         const taskMsg = JSON.parse(msg.content.toString());
+        logger.debug('Aqui', taskMsg);
         let taskEntity;
         try {
             // Create mongo task entity
