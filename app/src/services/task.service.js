@@ -128,6 +128,16 @@ class TaskService {
         return false;
     }
 
+    static async checkRunningTasks(datasetId) {
+        logger.debug(`[TaskService]: checking running task for datasetId:  ${datasetId}`);
+        logger.info(`[DBACCESS-FIND]: task.datasetId: ${datasetId}`);
+        const tasks = await Task.find({ datasetId }).exec();
+        const runningTask = tasks.find(task => ((task.status !== STATUS.SAVED) || (task.status !== STATUS.ERROR)));
+        if (runningTask) {
+            throw new Error(`Task with datasetId '${datasetId}' already running`);
+        }
+    }
+
 }
 
 module.exports = TaskService;

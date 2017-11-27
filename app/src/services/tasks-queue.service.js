@@ -81,9 +81,10 @@ class TasksQueueService {
     async consume(msg) {
         logger.info('Message received from TASKS QUEUE', msg);
         const taskMsg = JSON.parse(msg.content.toString());
-        logger.debug('Aqui', taskMsg);
         let taskEntity;
         try {
+            // check if any task is currently running for this dataset
+            await TaskService.checkRunningTasks(taskMsg.datasetId);
             // Create mongo task entity
             taskEntity = await TaskService.create(taskMsg);
             // Generate message
