@@ -25,7 +25,6 @@ class TaskService {
             message: taskData,
             reads: 0,
             writes: 0,
-            index: taskData.index,
             datasetId: taskData.datasetId
         }).save();
         return task;

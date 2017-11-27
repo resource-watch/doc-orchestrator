@@ -49,21 +49,19 @@ class StatusQueueService {
         }
     }
 
-    async generateExecutionTask(taskId, type) {
+    async generateExecutionTask(taskId, type, props) {
         const currentTask = await TaskService.get(taskId);
-        let contentMsg = {
+        const contentMsg = {
             taskId
         };
-        if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT) {
-            contentMsg.index = currentTask.index;
-        }
-        if (type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE) {
-            contentMsg.elasticTaskId = currentTask.elasticTaskId;
-        }
-        if (type === execution.MESSAGE_TYPES.EXECUTION_CREATE) {
-            contentMsg = Object.assign({}, contentMsg, currentTask.message);            
-            contentMsg.datasetId = currentTask.datasetId;
-        }
+        props.forEach(prop => {
+            // message prop cases
+            if (prop.indexOf('.') >= 0) {
+                contentMsg[prop.split('.')[1]] = currentTask.prop[prop.split('.')[0]][prop.split('.')[1]];
+            } else {
+                contentMsg[prop] = currentTask.prop;
+            }
+        });
         return execution.createMessage(type, contentMsg);
     }
 
@@ -71,13 +69,19 @@ class StatusQueueService {
 
         switch (statusMsg.type) {
 
-        case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
+        case status.MESSAGE_TYPES.STATUS_INDEX_CREATED: {
             // From INIT to INDEX_CREATED
             // update the index that it's in index attribute in the message
+            const currentTask = TaskService.get(statusMsg.taskId);
+            if ((currentTask.index) && (currentTask.index !== statusMsg.index)) {
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, ['index']);
+                await ExecutorTaskQueueService.sendMessage(message);
+            }
             await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_CREATED);
             await TaskService.updateIndex(statusMsg.taskId, statusMsg.index);
-            await DatasetService.updateIndex();
+            await DatasetService.update();
             break;
+        }
         case status.MESSAGE_TYPES.STATUS_READ_DATA:
             // Executor says that it's read a piece of data
             await TaskService.addRead(statusMsg.taskId);
@@ -88,7 +92,7 @@ class StatusQueueService {
             const finished = await TaskService.checkCounter(statusMsg.taskId);
             if (finished) {
                 // Sending confirm index creation
-                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT);
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT, ['index']);
                 await ExecutorTaskQueueService.sendMessage(message);
             }
             break;
@@ -100,15 +104,31 @@ class StatusQueueService {
             const finished = await TaskService.checkCounter(statusMsg.taskId);
             if (finished) {
                 // Sending confirm index creation
-                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT);
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT, ['index']);
                 await ExecutorTaskQueueService.sendMessage(message);
+            }
+            break;
+        }
+        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED: {
+            const currentTask = TaskService.get(statusMsg.taskId);
+            // if it caused by an error and The index was deleted due to an error
+            if ((currentTask.type !== task.MESSAGE_TYPES.TASK_OVERWRITE) && (currentTask.type !== task.MESSAGE_TYPES.TASK_DELETE_INDEX)) {
+                // ERROR!
+                // do nothing?
+            } else {
+                // it comes from a DELETE INDES OR OVERWRITE TASK
+                logger.debug(`[STATUS-QUEUE-SERVICE] Received ${status.MESSAGE_TYPES.STATUS_INDEX_DELETED}`);
+                await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_DELETED);
+                logger.debug('[STATUS-QUEUE-SERVICE] its a TASK_DELETE_INDEX');
+                await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
+                await DatasetService.update();
             }
             break;
         }
         case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY: {
             await TaskService.updateStatus(statusMsg.taskId, STATUS.PERFORMED_DELETE_QUERY);
             await TaskService.updateElasticTaskId(statusMsg.taskId, statusMsg.elasticTaskId);
-            const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE);
+            const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE, ['elasticTaskId']);
             await ExecutorTaskQueueService.sendMessage(message);
             break;
         }
@@ -116,34 +136,40 @@ class StatusQueueService {
             await TaskService.updateStatus(statusMsg.taskId, STATUS.FINISHED_DELETE_QUERY);
             // update dataset
             await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
-            await DatasetService.updateStatus();
+            await DatasetService.update();
             break;
-        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED: {
-            logger.debug(`[STATUS-QUEUE-SERVICE] Received ${status.MESSAGE_TYPES.STATUS_INDEX_DELETED}`);
-            await TaskService.updateStatus(statusMsg.taskId, STATUS.INDEX_DELETED);
-            const currentTask = await TaskService.get(statusMsg.taskId);
-            // From delete index operation or OVERWRITE?
-            if (currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) {
-                // delete index
-                logger.debug('[STATUS-QUEUE-SERVICE] its a TASK_DELETE_INDEX');
-                await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
-                await DatasetService.updateStatus();
-            } else {
-                // it comes from an OVERWRITE OPERATION, we gotta launch a create Task
-                // Sending a create message to execution queue
-                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CREATE);
+        case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED: {
+            const currentTask = TaskService.get(statusMsg.taskId);
+            // it comes from overwrite
+            if (currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, ['message.index']);
                 await ExecutorTaskQueueService.sendMessage(message);
+            } else if (currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT) {
+                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_REINDEX, ['index']);
+                await ExecutorTaskQueueService.sendMessage(message);
+            } else {
+                await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
+                await DatasetService.update();
             }
             break;
         }
-        case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
+        case status.MESSAGE_TYPES.STATUS_PERFORMED_REINDEX: {
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.PERFORMED_REINDEX);
+            await TaskService.updateElasticTaskId(statusMsg.taskId, statusMsg.elasticTaskId);
+            const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, ['elasticTaskId']);
+            await ExecutorTaskQueueService.sendMessage(message);
+            break;
+        }
+        case status.MESSAGE_TYPES.STATUS_FINISHED_REINDEX:
+            await TaskService.updateStatus(statusMsg.taskId, STATUS.FINISHED_REINDEX);
+            // update dataset
             await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
-            await DatasetService.updateStatus();
+            await DatasetService.update();
             break;
         case status.MESSAGE_TYPES.STATUS_ERROR:
             await TaskService.updateStatus(statusMsg.taskId, STATUS.ERROR);
             await TaskService.updateError(statusMsg.taskId, statusMsg.error);
-            await DatasetService.updateStatus();
+            await DatasetService.update();
             break;
         default:
             logger.info('do nothing?');

@@ -2,12 +2,8 @@ const logger = require('logger');
 
 class DatasetService {
 
-    static async updateStatus() {
+    static async update() {
         logger.debug('Updating dataset');
-    }
-
-    static async updateIndex() {
-        logger.debug('Updating index of dataset');
     }
 
 }

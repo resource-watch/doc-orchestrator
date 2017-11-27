@@ -61,12 +61,11 @@ class TasksQueueService {
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_DELETE:
-            logger.debug(taskMsg);
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_OVERWRITE:
-            // first step is delete the index, then we will catch the STATUS_INDEX_DELETED to create the new INDEX
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, taskMsg);
+            // first step is creating the index, then we will catch the WRITTEN_DATA to delete the previous INDEX
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_DELETE_INDEX:
             executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, taskMsg);
