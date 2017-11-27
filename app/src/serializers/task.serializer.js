@@ -6,7 +6,17 @@ class TaskSerializer {
             id: el._id,
             type: 'task',
             attributes: {
-                name: el.name,
+                type: el.type,
+                message: el.message,
+                status: el.status,
+                reads: el.reads,
+                writes: el.writes,
+                createdAt: el.createdAt,
+                updatedAt: el.updatedAt,
+                index: el.index,
+                elasticTaskId: el.elasticTaskId,
+                datasetId: el.datasetId,
+                error: el.error
             }
         };
     }
