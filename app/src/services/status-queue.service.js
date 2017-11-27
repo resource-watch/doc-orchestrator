@@ -59,9 +59,20 @@ class StatusQueueService {
             if (prop.indexOf('.') >= 0) {
                 contentMsg[prop.split('.')[1]] = currentTask.prop[prop.split('.')[0]][prop.split('.')[1]];
             } else {
-                contentMsg[prop] = currentTask.prop;
+                contentMsg[prop] = currentTask[prop];
             }
         });
+        return execution.createMessage(type, contentMsg);
+    }
+
+    async generateExecutionReIndexTask(taskId, type) {
+        const currentTask = await TaskService.get(taskId);
+        const contentMsg = {
+            taskId,
+            sourceIndex: currentTask.index,
+            targetIndex: currentTask.message.index
+        };
+        
         return execution.createMessage(type, contentMsg);
     }
 
@@ -139,13 +150,14 @@ class StatusQueueService {
             await DatasetService.update();
             break;
         case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED: {
-            const currentTask = TaskService.get(statusMsg.taskId);
+            const currentTask = await TaskService.get(statusMsg.taskId);
+            
             // it comes from overwrite
             if (currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
                 const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, ['message.index']);
                 await ExecutorTaskQueueService.sendMessage(message);
             } else if (currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT) {
-                const message = await this.generateExecutionTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_REINDEX, ['index']);
+                const message = await this.generateExecutionReIndexTask(statusMsg.taskId, execution.MESSAGE_TYPES.EXECUTION_REINDEX);
                 await ExecutorTaskQueueService.sendMessage(message);
             } else {
                 await TaskService.updateStatus(statusMsg.taskId, STATUS.SAVED);
@@ -178,8 +190,9 @@ class StatusQueueService {
     }
 
     async consume(msg) {
-        logger.info('Message received', msg);
+        // logger.info('Message received', msg);
         const statusMsg = JSON.parse(msg.content.toString());
+        logger.info('Message received in DOC-STATUS', statusMsg);
         try {
             await this.processMessage(statusMsg);
             // The message has been accepted.
