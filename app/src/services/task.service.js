@@ -1,7 +1,7 @@
 const logger = require('logger');
 const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
-const RunningTaskAlreadyError = require('errors/running-task-already.error');
+const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const STATUS = require('app.constants').STATUS;
 
 class TaskService {
@@ -95,7 +95,7 @@ class TaskService {
         const tasks = await Task.find({ datasetId }).exec();
         const runningTask = tasks.find(task => ((task.status !== STATUS.SAVED) && (task.status !== STATUS.ERROR)));
         if (runningTask) {
-            throw new RunningTaskAlreadyError(`Task with datasetId '${datasetId}' already running`);
+            throw new TaskAlreadyRunningError(`Task with datasetId '${datasetId}' already running`);
         }
     }
 

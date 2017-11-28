@@ -1,7 +1,7 @@
 const logger = require('logger');
 const QueueService = require('services/queue.service');
 const TaskService = require('services/task.service');
-const RunningTaskAlreadyError = require('errors/running-task-already.error');
+const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { task, execution } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const { TASKS_QUEUE } = require('app.constants');
@@ -67,7 +67,7 @@ class TasksQueueService extends QueueService {
             await TaskService.delete(this.task._id);
             // check if rejected because it's already running a task with the same datasetId
             // in these cases we do not count
-            if (err instanceof RunningTaskAlreadyError) {
+            if (err instanceof TaskAlreadyRunningError) {
                 this.returnMsg(msg);
                 return;
             }
