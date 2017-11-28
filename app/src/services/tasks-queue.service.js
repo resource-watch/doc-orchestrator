@@ -69,11 +69,11 @@ class TasksQueueService extends QueueService {
             // in these cases we do not count
             if (err instanceof TaskAlreadyRunningError) {
                 this.returnMsg(msg);
-                return;
-            }
-            const retries = msg.properties.headers['x-redelivered-count'] || 0;
-            if (retries < 10) {
-                this.returnMsg(msg);
+            } else {
+                const retries = msg.properties.headers['x-redelivered-count'] || 0;
+                if (retries < 10) {
+                    this.returnMsg(msg);
+                }
             }
         }
     }

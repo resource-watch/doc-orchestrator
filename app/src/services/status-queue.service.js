@@ -37,7 +37,7 @@ class StatusQueueService extends QueueService {
         if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
         }
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
@@ -46,12 +46,12 @@ class StatusQueueService extends QueueService {
 
     async readData() {
         // Executor says that it's read a piece of data
-        await TaskService.addRead(this.currentTask.taskId);
+        await TaskService.addRead(this.currentTask._id);
     }
 
     async readFile() {
         // The file has been read completely, just update the status
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.READ
         });
         const finished = await TaskService.checkCounter(this.statusMsg.taskId);
@@ -73,24 +73,24 @@ class StatusQueueService extends QueueService {
     }
 
     async indexDeleted() {
-        // if it caused by an error and The index was deleted due to an error
-        if ((this.currentTask.type !== task.MESSAGE_TYPES.TASK_OVERWRITE) && (this.currentTask.type !== task.MESSAGE_TYPES.TASK_DELETE_INDEX)) {
-            // ERROR!
-            // do nothing?
-        } else {
-            // it comes from a DELETE INDEX OR OVERWRITE TASK
-            await TaskService.update(this.currentTask.taskId, {
+        if ((this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT)) {
+            // it comes from a DELETE INDEX, OVERWRITE TASK or CONCAT TASK
+            await TaskService.update(this.currentTask._id, {
                 status: STATUS.INDEX_DELETED
             });
-            await TaskService.update(this.currentTask.taskId, {
+            await TaskService.update(this.currentTask._id, {
                 status: STATUS.SAVED
             });
             await DatasetService.update();
+        } else {
+            // if it caused by an error and The index was deleted due to an error
+            // ERROR!
+            // do nothing?
         }
     }
 
     async performedDeleteQuery() {
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.PERFORMED_DELETE_QUERY,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
@@ -98,10 +98,10 @@ class StatusQueueService extends QueueService {
     }
 
     async finishedDeleteQuery() {
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.FINISHED_DELETE_QUERY
         });
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.SAVED
         });
         await DatasetService.update();
@@ -112,9 +112,9 @@ class StatusQueueService extends QueueService {
         if (this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
         } else if (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'index', targetIndex: 'message.index' }]);
+            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'index' }, { targetIndex: 'message.index' }]);
         } else {
-            await TaskService.update(this.currentTask.taskId, {
+            await TaskService.update(this.currentTask._id, {
                 status: STATUS.SAVED
             });
             await DatasetService.update();
@@ -122,25 +122,23 @@ class StatusQueueService extends QueueService {
     }
 
     async performedReindex() {
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.PERFORMED_REINDEX,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, ['elasticTaskId']);
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }]);
     }
 
     async finishedReindex() {
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.FINISHED_REINDEX
         });
-        await TaskService.update(this.currentTask.taskId, {
-            status: STATUS.SAVED
-        });
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
         await DatasetService.update();
     }
 
     async error() {
-        await TaskService.update(this.currentTask.taskId, {
+        await TaskService.update(this.currentTask._id, {
             status: STATUS.ERROR,
             error: this.statusMsg.error
         });
@@ -193,7 +191,7 @@ class StatusQueueService extends QueueService {
     async consume(msg) {
         logger.debug('Message received in DOC-STATUS');
         this.statusMsg = JSON.parse(msg.content.toString());
-        this.currentTask = TaskService.get(this.statusMsg.taskId);
+        this.currentTask = await TaskService.get(this.statusMsg.taskId);
         try {
             await this.processMessage();
             // The message has been accepted.
