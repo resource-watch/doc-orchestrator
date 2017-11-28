@@ -1,95 +1,60 @@
 const logger = require('logger');
-const config = require('config');
-const amqp = require('amqplib');
+const QueueService = require('services/queue.service');
 const TaskService = require('services/task.service');
+const RunningTaskAlreadyError = require('errors/running-task-already.error');
 const { task, execution } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const { TASKS_QUEUE } = require('app.constants');
 
-class TasksQueueService {
+class TasksQueueService extends QueueService {
 
     constructor() {
-        this.q = TASKS_QUEUE;
-        logger.info(`Connecting to queue ${this.q}`);
-        try {
-            this.init().then(() => {
-                logger.info('Connected');
-            }, (err) => {
-                logger.error(err);
-                process.exit(1);
-            });
-        } catch (err) {
-            logger.error(err);
-        }
+        super(TASKS_QUEUE);
+        this.taskMsg = {};
+        this.task = {};
     }
 
-    async init() {
-        const conn = await amqp.connect(config.get('rabbitmq.url'));
-        this.channel = await conn.createConfirmChannel();
-        await this.channel.assertQueue(this.q, { durable: true });
-        this.channel.prefetch(1);
-        logger.info(` [*] Waiting for messages in ${this.q}`);
-        this.channel.consume(this.q, this.consume.bind(this), {
-            noAck: false
-        });
-    }
-
-    async returnMsg(msg) {
-        logger.info(`Sending message to ${this.q}`);
-        try {
-            // Sending to queue
-            let count = msg.properties.headers['x-redelivered-count'] || 0;
-            count += 1;
-            this.channel.sendToQueue(this.q, msg.content, { headers: { 'x-redelivered-count': count } });
-        } catch (err) {
-            logger.error(`Error sending message to  ${this.q}`);
-            throw err;
-        }
-    }
-
-    formExecutionMessage(taskMsg) {
+    async processMessage() {
         // Create the message
         let executorTaskMessage;
         // Adding taskId
-        taskMsg.taskId = taskMsg.id;
-        switch (taskMsg.type) {
+        this.taskMsg.taskId = this.taskMsg.id;
+        switch (this.taskMsg.type) {
 
         case task.MESSAGE_TYPES.TASK_CREATE:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, taskMsg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_CONCAT:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, taskMsg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, this.taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_DELETE:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, taskMsg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, this.taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_OVERWRITE:
             // first step is creating the index, then we will catch the WRITTEN_DATA to delete the previous INDEX
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, taskMsg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
             break;
         case task.MESSAGE_TYPES.TASK_DELETE_INDEX:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, taskMsg);
+            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, this.taskMsg);
             break;
         default:
             logger.info('Default');
 
         }
-        return executorTaskMessage;
+        await ExecutorTaskQueueService.sendMessage(executorTaskMessage);
+
     }
 
     async consume(msg) {
-        logger.info('Message received from TASKS QUEUE', msg);
-        const taskMsg = JSON.parse(msg.content.toString());
-        let taskEntity;
+        logger.info('Message received in DOC-TASKS');
+        this.taskMsg = JSON.parse(msg.content.toString());
         try {
             // check if any task is currently running for this dataset
-            await TaskService.checkRunningTasks(taskMsg.datasetId);
+            await TaskService.checkRunningTasks(this.taskMsg.datasetId);
             // Create mongo task entity
-            taskEntity = await TaskService.create(taskMsg);
-            // Generate message 
-            const executorTaskMessage = this.formExecutionMessage(taskMsg);
-            // Send Message ExecutorTask Queue
-            await ExecutorTaskQueueService.sendMessage(executorTaskMessage);
+            this.task = await TaskService.create(this.taskMsg);
+            // Process message
+            await this.processMessage();
             // All OK -> msg sent, so ack emitted
             this.channel.ack(msg);
             logger.debug('msg accepted');
@@ -99,7 +64,13 @@ class TasksQueueService {
             // Accept the message
             this.channel.ack(msg);
             // Delete mongo task entity
-            await TaskService.delete(taskEntity._id);
+            await TaskService.delete(this.task._id);
+            // check if rejected because it's already running a task with the same datasetId
+            // in these cases we do not count
+            if (err instanceof RunningTaskAlreadyError) {
+                this.returnMsg(msg);
+                return;
+            }
             const retries = msg.properties.headers['x-redelivered-count'] || 0;
             if (retries < 10) {
                 this.returnMsg(msg);
