@@ -41,7 +41,10 @@ class StatusQueueService extends QueueService {
             status: STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
-        await DatasetService.update();
+        await DatasetService.update(this.currentTask._id, {
+            status: STATUS.INDEX_CREATED,
+            tableName: this.statusMsg.index
+        });
     }
 
     async readData() {
@@ -81,7 +84,9 @@ class StatusQueueService extends QueueService {
             await TaskService.update(this.currentTask._id, {
                 status: STATUS.SAVED
             });
-            await DatasetService.update();
+            await DatasetService.update(this.currentTask._id, {
+                status: STATUS.SAVED,
+            });
         } else {
             // if it caused by an error and The index was deleted due to an error
             // ERROR!
@@ -104,7 +109,9 @@ class StatusQueueService extends QueueService {
         await TaskService.update(this.currentTask._id, {
             status: STATUS.SAVED
         });
-        await DatasetService.update();
+        await DatasetService.update(this.currentTask._id, {
+            status: STATUS.SAVED,
+        });
     }
 
     async importConfirmed() {
@@ -117,7 +124,9 @@ class StatusQueueService extends QueueService {
             await TaskService.update(this.currentTask._id, {
                 status: STATUS.SAVED
             });
-            await DatasetService.update();
+            await DatasetService.update(this.currentTask._id, {
+                status: STATUS.SAVED,
+            });
         }
     }
 
@@ -133,8 +142,10 @@ class StatusQueueService extends QueueService {
         await TaskService.update(this.currentTask._id, {
             status: STATUS.FINISHED_REINDEX
         });
+        await DatasetService.update(this.currentTask._id, {
+            status: STATUS.FINISHED_REINDEX,
+        });
         await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
-        await DatasetService.update();
     }
 
     async error() {
@@ -142,7 +153,9 @@ class StatusQueueService extends QueueService {
             status: STATUS.ERROR,
             error: this.statusMsg.error
         });
-        await DatasetService.update();
+        await DatasetService.update(this.currentTask._id, {
+            status: STATUS.ERROR,
+        });
     }
 
     async processMessage() {
