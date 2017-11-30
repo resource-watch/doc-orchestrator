@@ -10,7 +10,7 @@ const STATUS = require('app.constants').STATUS;
 class StatusQueueService extends QueueService {
 
     constructor() {
-        super(STATUS_QUEUE);
+        super(STATUS_QUEUE, true);
         this.statusMsg = {};
         this.currentTask = {};
     }
@@ -41,10 +41,14 @@ class StatusQueueService extends QueueService {
             status: STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
-        await DatasetService.update(this.currentTask._id, {
+        // update the dataset
+        const datasetProps = {
             status: STATUS.INDEX_CREATED,
-            tableName: this.statusMsg.index
-        });
+        };
+        if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CONCAT) {
+            datasetProps.tableName = this.statusMsg.index;
+        }
+        await DatasetService.update(this.currentTask.datasetId, datasetProps);
     }
 
     async readData() {
@@ -84,7 +88,7 @@ class StatusQueueService extends QueueService {
             await TaskService.update(this.currentTask._id, {
                 status: STATUS.SAVED
             });
-            await DatasetService.update(this.currentTask._id, {
+            await DatasetService.update(this.currentTask.datasetId, {
                 status: STATUS.SAVED,
             });
         } else {
@@ -109,7 +113,7 @@ class StatusQueueService extends QueueService {
         await TaskService.update(this.currentTask._id, {
             status: STATUS.SAVED
         });
-        await DatasetService.update(this.currentTask._id, {
+        await DatasetService.update(this.currentTask.datasetId, {
             status: STATUS.SAVED,
         });
     }
@@ -124,7 +128,7 @@ class StatusQueueService extends QueueService {
             await TaskService.update(this.currentTask._id, {
                 status: STATUS.SAVED
             });
-            await DatasetService.update(this.currentTask._id, {
+            await DatasetService.update(this.currentTask.datasetId, {
                 status: STATUS.SAVED,
             });
         }
@@ -142,7 +146,7 @@ class StatusQueueService extends QueueService {
         await TaskService.update(this.currentTask._id, {
             status: STATUS.FINISHED_REINDEX
         });
-        await DatasetService.update(this.currentTask._id, {
+        await DatasetService.update(this.currentTask.datasetId, {
             status: STATUS.FINISHED_REINDEX,
         });
         await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
@@ -153,7 +157,7 @@ class StatusQueueService extends QueueService {
             status: STATUS.ERROR,
             error: this.statusMsg.error
         });
-        await DatasetService.update(this.currentTask._id, {
+        await DatasetService.update(this.currentTask.datasetId, {
             status: STATUS.ERROR,
         });
     }

@@ -9,7 +9,7 @@ const { TASKS_QUEUE } = require('app.constants');
 class TasksQueueService extends QueueService {
 
     constructor() {
-        super(TASKS_QUEUE);
+        super(TASKS_QUEUE, true);
         this.taskMsg = {};
         this.task = {};
     }
