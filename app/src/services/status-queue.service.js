@@ -19,6 +19,7 @@ class StatusQueueService extends QueueService {
         const contentMsg = {
             taskId: this.currentTask._id
         };
+        this.currentTask = await TaskService.get(this.statusMsg.taskId);
         props.forEach(prop => {
             const field = Object.keys(prop)[0];
             const dbField = prop[field];

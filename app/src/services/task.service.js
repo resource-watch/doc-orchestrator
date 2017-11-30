@@ -43,6 +43,7 @@ class TaskService {
         task = await task.save();
         return task;
     }
+
     static async delete(id) {
         logger.debug(`[TaskService]: Deleting task with id:  ${id}`);
         logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
