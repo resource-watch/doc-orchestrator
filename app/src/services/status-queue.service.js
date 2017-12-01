@@ -208,9 +208,9 @@ class StatusQueueService extends QueueService {
 
     async consume(msg) {
         logger.debug('Message received in DOC-STATUS');
-        this.statusMsg = JSON.parse(msg.content.toString());
-        this.currentTask = await TaskService.get(this.statusMsg.taskId);
         try {
+            this.statusMsg = JSON.parse(msg.content.toString());
+            this.currentTask = await TaskService.get(this.statusMsg.taskId);
             await this.processMessage();
             // The message has been accepted.
             this.channel.ack(msg);
