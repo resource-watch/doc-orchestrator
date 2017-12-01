@@ -23,13 +23,13 @@ spec:
           - start
         env:
           - name: PORT
-            value: "3005"
+            value: "5000"
           - name: NODE_ENV
             value: staging
           - name: NODE_PATH
             value: app/src
           - name: LOCAL_URL
-            value: http://{name}.default.svc.cluster.local:3005
+            value: http://{name}.default.svc.cluster.local:5000
           - name: CT_URL
             valueFrom:
                 secretKeyRef:
@@ -62,6 +62,6 @@ spec:
                   key: DOC_ORCHESTRATOR_MONGO_URI
 
         ports:
-          - containerPort: 3005
+          - containerPort: 5000
 
       restartPolicy: Always
