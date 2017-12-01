@@ -6,6 +6,6 @@
         "dirLogFile": null
     },
     "service": {
-        "name": "Doc orchestrator"
+        "name": "Doc Importer Orchestrator"
     }
 }

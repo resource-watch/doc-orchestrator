@@ -1,0 +1,12 @@
+{
+	"name": "#(service.name)",
+	"tags": ["doc-importer", "orchestrator"],
+	"endpoints": [{
+		"path": "/v1/doc-importer/task/:task",
+		"method": "GET",
+		"redirect": {
+			"method": "GET",
+			"path": "/api/v1/doc-importer/task/:task"
+		}
+	}]
+}
