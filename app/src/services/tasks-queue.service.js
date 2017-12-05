@@ -1,6 +1,7 @@
 const logger = require('logger');
 const QueueService = require('services/queue.service');
 const TaskService = require('services/task.service');
+const DatasetService = require('services/dataset.service');
 const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { task, execution } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
@@ -53,6 +54,10 @@ class TasksQueueService extends QueueService {
             await TaskService.checkRunningTasks(this.taskMsg.datasetId);
             // Create mongo task entity
             this.task = await TaskService.create(this.taskMsg);
+            // Update dataset
+            await DatasetService.update(this.task.datasetId, {
+                taskId: `/v1/doc-importer/task/${this.task._id}`
+            });
             // Process message
             await this.processMessage();
             // All OK -> msg sent, so ack emitted
@@ -65,6 +70,10 @@ class TasksQueueService extends QueueService {
             this.channel.ack(msg);
             // Delete mongo task entity
             await TaskService.delete(this.task._id);
+            // Update DatasetService
+            await DatasetService.update(this.task.datasetId, {
+                taskId: ''
+            });
             // check if rejected because it's already running a task with the same datasetId
             // in these cases we do not count
             if (err instanceof TaskAlreadyRunningError) {
