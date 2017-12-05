@@ -16,6 +16,7 @@ class TaskSerializer {
                 index: el.index,
                 elasticTaskId: el.elasticTaskId,
                 datasetId: el.datasetId,
+                logs: el.logs,
                 error: el.error
             }
         };
