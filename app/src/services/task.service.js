@@ -39,6 +39,20 @@ class TaskService {
         task.index = taskData.index || task.index;
         task.elasticTaskId = taskData.elasticTaskId || task.elasticTaskId;
         task.error = taskData.error || task.error;
+        if (taskData.log && taskData.log instanceof Object) {
+            task.logs.push(taskData.log);
+        }
+        logger.debug(`[DBACCESS-SAVE]: update task.id ${id}`);
+        task = await task.save();
+        return task;
+    }
+
+    static async resetCounters(id) {
+        logger.debug(`[TaskService]: ResetCounters of task with id:  ${id}`);
+        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
+        let task = await TaskService.get(id);
+        task.reads = 0;
+        task.writes = 0;
         logger.debug(`[DBACCESS-SAVE]: update task.id ${id}`);
         task = await task.save();
         return task;

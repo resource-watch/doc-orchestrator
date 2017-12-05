@@ -37,6 +37,7 @@ class StatusQueueService extends QueueService {
     async indexCreated() {
         if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+            await DatasetService.resetCounters(this.currentTask.datasetId);
         }
         await TaskService.update(this.currentTask._id, {
             status: STATUS.INDEX_CREATED,
@@ -55,6 +56,12 @@ class StatusQueueService extends QueueService {
     async readData() {
         // Executor says that it's read a piece of data
         await TaskService.addRead(this.currentTask._id);
+    }
+
+    async blockchainGenerated() {
+        await DatasetService.update(this.currentTask.datasetId, {
+            blockchain: this.statusMsg.blockchain
+        });
     }
 
     async readFile() {
@@ -173,6 +180,9 @@ class StatusQueueService extends QueueService {
         case status.MESSAGE_TYPES.STATUS_READ_DATA:
             await this.readData();
             break;
+        case status.MESSAGE_TYPES.STATUS_BLOCKCHAIN_GENERATED:
+            await this.blockchainGenerated();
+            break;
         case status.MESSAGE_TYPES.STATUS_READ_FILE:
             await this.readFile();
             break;
@@ -210,7 +220,8 @@ class StatusQueueService extends QueueService {
         logger.debug('Message received in DOC-STATUS');
         try {
             this.statusMsg = JSON.parse(msg.content.toString());
-            this.currentTask = await TaskService.get(this.statusMsg.taskId);
+            // update just logs and get the entity at the same time
+            this.currentTask = await TaskService.update(this.statusMsg.taskId, { log: this.statusMsg });
             await this.processMessage();
             // The message has been accepted.
             this.channel.ack(msg);
