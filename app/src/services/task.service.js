@@ -42,6 +42,7 @@ class TaskService {
         if (taskData.log && taskData.log instanceof Object) {
             task.logs.push(taskData.log);
         }
+        task.updatedAt = new Date();
         logger.debug(`[DBACCESS-SAVE]: update task.id ${id}`);
         task = await task.save();
         return task;
