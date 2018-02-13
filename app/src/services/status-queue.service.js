@@ -37,7 +37,7 @@ class StatusQueueService extends QueueService {
     async indexCreated() {
         if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
-            await TaskService.resetCounters(this.currentTask.datasetId);
+            await TaskService.resetCounters(this.currentTask._id);
         }
         await TaskService.update(this.currentTask._id, {
             status: STATUS.INDEX_CREATED,
