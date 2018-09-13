@@ -1,4 +1,4 @@
-class RabbitMQConnection extends Error {
+class RabbitMQConnectionError extends Error {
 
     constructor(message) {
         super(message);
@@ -8,4 +8,4 @@ class RabbitMQConnection extends Error {
 
 }
 
-module.exports = RabbitMQConnection;
+module.exports = RabbitMQConnectionError;

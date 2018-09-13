@@ -1,7 +1,7 @@
 const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib');
-const RabbitMQConnection = require('errors/rabbitmq-connection.error');
+const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const sleep = require('sleep');
 
 let connectAttempts = 10;
@@ -36,7 +36,7 @@ class QueueService {
         }
         if (!conn) {
             logger.error(`Could not connect to RabbitMQ, giving up`);
-            throw new RabbitMQConnection();
+            throw new RabbitMQConnectionError();
         }
         this.channel = await conn.createConfirmChannel();
         await this.channel.assertQueue(this.q, { durable: true });

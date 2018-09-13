@@ -1,11 +1,15 @@
 {
-     "logger": {
-        "name": "doc-orchestrator-DEV",
-        "level": "debug",
-        "toFile": false,
-        "dirLogFile": null
-    },
-    "service": {
-        "name": "Doc Importer Orchestrator"
-    }
+  "logger": {
+    "name": "doc-orchestrator-DEV",
+    "level": "debug",
+    "toFile": false,
+    "dirLogFile": null
+  },
+  "service": {
+    "name": "Doc Importer Orchestrator"
+  },
+  "queues": {
+    "docTasks": "DOC-TASKS",
+    "executorTasks": "DOC-EXECUTOR-TASKS"
+  }
 }
