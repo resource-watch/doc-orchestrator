@@ -5,7 +5,6 @@ const STATUS = require('app.constants').STATUS;
 class DatasetService {
 
     static async update(id, dataset) {
-        logger.debug('Updating dataset');
         if (dataset.status === STATUS.SAVED) {
             dataset.status = 1;
         } else if (dataset.status === STATUS.ERROR) {
@@ -13,6 +12,8 @@ class DatasetService {
         } else {
             dataset.status = 0;
         }
+        logger.debug(`Updating dataset: ${JSON.stringify(dataset)}`);
+
         await ctRegisterMicroservice.requestToMicroservice({
             uri: `/dataset/${id}`,
             method: 'PATCH',
