@@ -12,7 +12,7 @@ class DatasetService {
         } else {
             dataset.status = 0;
         }
-        logger.debug(`Updating dataset: ${dataset}`);
+        logger.debug(`Updating dataset: ${JSON.stringify(dataset)}`);
 
         await ctRegisterMicroservice.requestToMicroservice({
             uri: `/dataset/${id}`,
