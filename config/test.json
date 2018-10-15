@@ -4,5 +4,10 @@
         "level": "debug",
         "toFile": false,
         "dirLogFile": null
+    },
+    "mongodb": {
+        "database": "doc_orchestrator_test",
+        "host": "localhost",
+        "port": 27017
     }
 }
