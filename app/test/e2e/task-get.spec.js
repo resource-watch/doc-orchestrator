@@ -2,7 +2,6 @@
 const nock = require('nock');
 const chai = require('chai');
 const Task = require('models/task.model');
-const { ROLES } = require('./test.constants');
 const { createTask, deserializeTask } = require('./utils');
 const { getTestServer } = require('./test-server');
 
@@ -13,7 +12,7 @@ let requester;
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('Dataset create tests', () => {
+describe('Task get tests', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -23,8 +22,6 @@ describe('Dataset create tests', () => {
         requester = await getTestServer();
 
         Task.remove({}).exec();
-
-        nock.cleanAll();
     });
 
     it('Get a non-existent task should return 404', async () => {

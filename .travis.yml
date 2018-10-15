@@ -12,14 +12,9 @@ env:
     - CC_TEST_REPORTER_ID=55b8f06127da6d2d99d23008642070c10bd8e599e0a8cfa81049e7dab0a39ea5
     - NODE_ENV=test
     - PORT=5037
-    - LOGGER_TYPE=console
-    - DEBUG=redis-cache-plugin
-    - NODE_PATH=app/src
-    - EXEC_MIGRATION=true
-    - JWT_SECRET=mysecret
-    - COOKIE_DOMAIN=mymachine
-    - SESSION_KEY=test
-    - PUBLIC_URL=http://tower.dev:5037
+    - CT_URL=http://127.0.0.1:9000
+    - CT_REGISTER_MODE=auto
+    - API_VERSION=v1
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
   - chmod +x ./cc-test-reporter
