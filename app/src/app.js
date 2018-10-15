@@ -8,6 +8,13 @@ const ctRegisterMicroservice = require('ct-register-microservice-node');
 const mongoose = require('mongoose');
 const mongoUri = process.env.MONGO_URI || `mongodb://${config.get('mongodb.host')}:${config.get('mongodb.port')}/${config.get('mongodb.database')}`;
 
+const koaBody = require('koa-body')({
+    multipart: true,
+    jsonLimit: '50mb',
+    formLimit: '50mb',
+    textLimit: '50mb'
+});
+
 async function init() {
     return new Promise((resolve, reject) => {
         async function onDbReady(err) {
@@ -23,6 +30,8 @@ async function init() {
             require('services/status-queue.service');
 
             const app = new Koa();
+
+            app.use(koaBody);
 
             app.use(async (ctx, next) => {
                 try {

@@ -18,6 +18,6 @@ exports.getTestServer = async function getTestServer() {
     const serverPromise = require('../../src/app');
     const { server } = await serverPromise();
     requester = chai.request(server).keepOpen();
-    //
+
     return requester;
 };
