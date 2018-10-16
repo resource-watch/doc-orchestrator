@@ -1,6 +1,10 @@
 const logger = require('logger');
 const config = require('config');
 const amqp = require('amqplib');
+const RabbitMQConnection = require('errors/rabbitmq-connection.error');
+const sleep = require('sleep');
+
+let connectAttempts = 10;
 
 class QueueService {
 
@@ -20,7 +24,20 @@ class QueueService {
     }
 
     async init(consume) {
-        const conn = await amqp.connect(config.get('rabbitmq.url'));
+        let conn = null;
+        while (connectAttempts >= 0 && conn === null) {
+            try {
+                conn = await amqp.connect(config.get('rabbitmq.url'));
+            } catch (err) {
+                logger.debug(`Failure connection to RabbitMQ on ${config.get('rabbitmq.url')}, ${connectAttempts} reconnect attempts remaining`);
+                connectAttempts--;
+                await sleep.sleep(5);
+            }
+        }
+        if (!conn) {
+            logger.error(`Could not connect to RabbitMQ, giving up`);
+            throw new RabbitMQConnection();
+        }
         this.channel = await conn.createConfirmChannel();
         await this.channel.assertQueue(this.q, { durable: true });
         if (consume) {

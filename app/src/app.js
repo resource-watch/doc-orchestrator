@@ -3,6 +3,7 @@ const config = require('config');
 const Koa = require('koa');
 const koaLogger = require('koa-logger');
 const loader = require('loader');
+const sleep = require('sleep');
 const ErrorSerializer = require('serializers/error.serializer');
 const ctRegisterMicroservice = require('ct-register-microservice-node');
 const mongoose = require('mongoose');
@@ -15,14 +16,24 @@ const koaBody = require('koa-body')({
     textLimit: '50mb'
 });
 
+let retries = 10;
+
 async function init() {
     return new Promise((resolve, reject) => {
         async function onDbReady(err) {
-
             if (err) {
-                logger.error('MongoURI', mongoUri);
-                logger.error(err);
-                reject(new Error(err));
+                if (retries >= 0) {
+                    retries--;
+                    logger.error(`Failed to connect to MongoDB uri ${mongoUri}, retrying...`);
+                    sleep.sleep(5);
+                    mongoose.connect(mongoUri, onDbReady);
+                } else {
+                    logger.error('MongoURI', mongoUri);
+                    logger.error(err);
+                    reject(new Error(err));
+                }
+
+                return;
             }
 
             logger.info('Initializing doc-orchestrator');

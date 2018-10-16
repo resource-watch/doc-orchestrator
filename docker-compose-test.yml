@@ -1,8 +1,34 @@
-test:
-  extends:
-    file: base.yml
-    service: base
-  container_name: doc-orchestrator-test
-  environment:
-    NODE_ENV: test
-  command: test
+version: "3"
+services:
+  test:
+    build: .
+    ports:
+      - "5000"
+    container_name: doc-orchestrator-test
+    environment:
+      NODE_ENV: test
+      NODE_PATH: app/src
+      PORT: 5000
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      MONGO_PORT_27017_TCP_ADDR: mongo
+      CT_URL: http://127.0.0.1:9000
+      API_VERSION: v1
+      CT_REGISTER_MODE: auto
+    command: test
+    depends_on:
+      - mongo
+      - rabbitmq
+
+  mongo:
+    image: mongo:3.6.8
+    environment:
+      MONGO_INITDB_DATABASE: doc_orchestrator_test
+      MONGO_INITDB_ROOT_USERNAME:
+      MONGO_INITDB_ROOT_PASSWORD:
+    ports:
+    - "27017"
+
+  rabbitmq:
+    image: rabbitmq
+    ports:
+    - "5672"
