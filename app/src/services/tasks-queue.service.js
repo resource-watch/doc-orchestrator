@@ -5,12 +5,12 @@ const DatasetService = require('services/dataset.service');
 const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { task, execution } = require('doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
-const { TASKS_QUEUE } = require('app.constants');
+const config = require('config');
 
 class TasksQueueService extends QueueService {
 
     constructor() {
-        super(TASKS_QUEUE, true);
+        super(config.get('queues.docTasks'), true);
         this.taskMsg = {};
         this.task = {};
     }
@@ -47,7 +47,7 @@ class TasksQueueService extends QueueService {
     }
 
     async consume(msg) {
-        logger.info('Message received in DOC-TASKS');
+        logger.info(`Message received in ${config.get('queues.docTasks')}`);
         this.taskMsg = JSON.parse(msg.content.toString());
         try {
             // check if any task is currently running for this dataset
@@ -61,8 +61,8 @@ class TasksQueueService extends QueueService {
             // Process message
             await this.processMessage();
             // All OK -> msg sent, so ack emitted
-            this.channel.ack(msg);
-            logger.debug('msg accepted');
+            await this.channel.ack(msg);
+            logger.debug(`${config.get('queues.docTasks')} queue message acknowledged`);
         } catch (err) {
             // Error creating entity or sending to queue
             logger.error(err);

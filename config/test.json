@@ -1,16 +1,20 @@
 {
-    "logger": {
-        "name": "doc-orchestrator-test",
-        "level": "debug",
-        "toFile": false,
-        "dirLogFile": null
-    },
-    "mongodb": {
-        "database": "doc_orchestrator_test",
-        "host": "localhost",
-        "port": 27017
-    },
-    "rabbitmq": {
-        "url": "amqp://0.0.0.0:5672"
-    }
+  "logger": {
+    "name": "doc-orchestrator-test",
+    "level": "debug",
+    "toFile": false,
+    "dirLogFile": null
+  },
+  "mongodb": {
+    "database": "doc_orchestrator_test",
+    "host": "localhost",
+    "port": 27017
+  },
+  "rabbitmq": {
+    "url": "amqp://0.0.0.0:5672"
+  },
+  "queues": {
+    "docTasks": "DOC-TASKS-TEST",
+    "executorTasks": "DOC-EXECUTOR-TASKS-TEST"
+  }
 }
