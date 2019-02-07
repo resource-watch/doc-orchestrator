@@ -3,7 +3,7 @@ const QueueService = require('services/queue.service');
 const TaskService = require('services/task.service');
 const DatasetService = require('services/dataset.service');
 const TaskAlreadyRunningError = require('errors/task-already-running.error');
-const { task, execution } = require('doc-importer-messages');
+const { task, execution } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const config = require('config');
 
