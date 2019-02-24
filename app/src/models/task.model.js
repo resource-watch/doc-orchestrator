@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const uuidV4 = require('uuid/v4');
 const Schema = mongoose.Schema;
-const { task } = require('doc-importer-messages');
+const { task } = require('rw-doc-importer-messages');
 const MESSAGE_TYPES = task.MESSAGE_TYPES;
 const STATUS = require('app.constants').STATUS;
 

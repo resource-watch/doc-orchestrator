@@ -6,7 +6,7 @@ const config = require('config');
 const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
-const { task, execution } = require('doc-importer-messages');
+const { task, execution } = require('rw-doc-importer-messages');
 const { getTestServer } = require('./test-server');
 const sleep = require('sleep');
 
