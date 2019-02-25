@@ -22,24 +22,24 @@ class TasksQueueService extends QueueService {
         this.taskMsg.taskId = this.taskMsg.id;
         switch (this.taskMsg.type) {
 
-        case task.MESSAGE_TYPES.TASK_CREATE:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
-            break;
-        case task.MESSAGE_TYPES.TASK_CONCAT:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, this.taskMsg);
-            break;
-        case task.MESSAGE_TYPES.TASK_DELETE:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, this.taskMsg);
-            break;
-        case task.MESSAGE_TYPES.TASK_OVERWRITE:
-            // first step is creating the index, then we will catch the WRITTEN_DATA to delete the previous INDEX
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
-            break;
-        case task.MESSAGE_TYPES.TASK_DELETE_INDEX:
-            executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, this.taskMsg);
-            break;
-        default:
-            logger.info('Default');
+            case task.MESSAGE_TYPES.TASK_CREATE:
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
+                break;
+            case task.MESSAGE_TYPES.TASK_CONCAT:
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, this.taskMsg);
+                break;
+            case task.MESSAGE_TYPES.TASK_DELETE:
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, this.taskMsg);
+                break;
+            case task.MESSAGE_TYPES.TASK_OVERWRITE:
+                // first step is creating the index, then we will catch the WRITTEN_DATA to delete the previous INDEX
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
+                break;
+            case task.MESSAGE_TYPES.TASK_DELETE_INDEX:
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, this.taskMsg);
+                break;
+            default:
+                logger.info('Default');
 
         }
         await ExecutorTaskQueueService.sendMessage(executorTaskMessage);

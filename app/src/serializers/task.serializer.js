@@ -24,12 +24,16 @@ class TaskSerializer {
 
     static serialize(data) {
         const result = {};
+        if (data && Array.isArray(data) && data.length === 0) {
+            result.data = [];
+            return result;
+        }
         if (data) {
             if (data.docs) {
                 result.data = data.docs.map(el => TaskSerializer.serializeElement(el));
             } else {
                 if (Array.isArray(data)) {
-                    result.data = TaskSerializer.serializeElement(data[0]);
+                    result.data = data.map(e => TaskSerializer.serializeElement(e));
                 } else {
                     result.data = TaskSerializer.serializeElement(data);
                 }

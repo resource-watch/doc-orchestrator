@@ -33,6 +33,21 @@ class TaskRouter {
         }
     }
 
+    static async getAll(ctx) {
+        logger.info(`[TaskRouter] Getting all tasks`);
+        const { query } = ctx;
+        try {
+            const tasks = await TaskService.getAll(query);
+            ctx.body = TaskSerializer.serialize(tasks);
+        } catch (err) {
+            if (err instanceof TaskNotFound) {
+                ctx.throw(404, err.message);
+                return;
+            }
+            throw err;
+        }
+    }
+
     static async delete(ctx) {
         const id = ctx.params.task;
         logger.info(`[TaskRouter] Deleting task with id: ${id}`);
@@ -65,6 +80,7 @@ const authorizationMiddleware = async (ctx, next) => {
 };
 
 
+router.get('/', TaskRouter.getAll);
 router.get('/:task', TaskRouter.get);
 router.delete('/:task', authorizationMiddleware, TaskRouter.delete);
 
