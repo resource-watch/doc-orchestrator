@@ -14,7 +14,7 @@ function isObject(property) {
 
 const deserializeTask = (response) => {
     if (isArray(response.body.data)) {
-        return response.body.data;
+        return response.body.data.map(e => e.attributes);
     }
     if (isObject(response.body.data)) {
         return response.body.data.attributes;
@@ -24,7 +24,7 @@ const deserializeTask = (response) => {
 
 const getUUID = () => Math.random().toString(36).substring(7);
 
-const createTask = (status, type) => {
+const createTask = (status, type, createdAt = new Date()) => {
     const uuid = getUUID();
 
     return {
@@ -33,6 +33,8 @@ const createTask = (status, type) => {
         writes: 0,
         logs: [],
         type,
+        createdAt,
+        updatedAt: createdAt,
         message: {
             id: getUUID(),
             type,
