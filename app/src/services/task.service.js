@@ -10,6 +10,7 @@ class TaskService {
         const allowedSearchFields = {
             type: 'type',
             status: 'status',
+            datasetId: 'datasetId',
             createdAt: 'createdAt',
             updatedAt: 'updatedAt',
             createdBefore: 'createdAt',

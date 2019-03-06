@@ -19,7 +19,7 @@ let channel;
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('DOC-TASK handling process', () => {
+describe('TASK_CREATE handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -59,7 +59,7 @@ describe('DOC-TASK handling process', () => {
 
     })
 
-    it('Consume a doc task and create a new task (happy case)', async () => {
+    it('Consume a TASK_CREATE message and create a new task and EXECUTION_CREATE message (happy case)', async () => {
         const timestamp = new Date().getTime();
 
         const message = {
@@ -79,11 +79,13 @@ describe('DOC-TASK handling process', () => {
         preDocsQueueStatus.messageCount.should.equal(0);
         const preQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
         preQueueStatus.messageCount.should.equal(0);
+        const emptyTaskList = await Task.find({}).exec();
+        emptyTaskList.should.be.an('array').and.have.lengthOf(0);
 
 
         await channel.sendToQueue(config.get('queues.docTasks'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 5 seconds to do its thing
+        // Give the code 3 seconds to do its thing
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
