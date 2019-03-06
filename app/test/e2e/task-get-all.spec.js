@@ -326,6 +326,26 @@ describe('Task get all tests', () => {
         task1.should.have.property('type').and.equal(fakeTask1.type);
     });
 
+    it('Get a list of existent tasks filtered by dataset id should return 200 with the filtered task list', async () => {
+        const response = await requester
+            .get(`/api/v1/doc-importer/task?datasetId=${fakeTask1.datasetId}`)
+            .send();
+
+        response.status.should.equal(200);
+        response.body.should.have.property('data').and.be.an('array').and.have.length(1);
+
+        const responseTasks = deserializeTask(response);
+        const task1 = responseTasks[0];
+
+        task1.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
+        task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
+        task1.should.have.property('reads').and.equal(0);
+        task1.should.have.property('writes').and.equal(0);
+        task1.should.have.property('message').and.be.an('object');
+        task1.should.have.property('status').and.equal(fakeTask1.status);
+        task1.should.have.property('type').and.equal(fakeTask1.type);
+    });
+
     afterEach(() => {
         if (!nock.isDone()) {
             throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
