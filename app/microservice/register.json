@@ -1,20 +1,34 @@
 {
-	"name": "#(service.name)",
-	"tags": ["doc-importer", "orchestrator"],
-	"endpoints": [{
-		"path": "/v1/doc-importer/task/:task",
-		"method": "GET",
-		"redirect": {
-			"method": "GET",
-			"path": "/api/v1/doc-importer/task/:task"
-		}
-	}, {
-		"path": "/v1/doc-importer/task/:task",
-		"method": "DELETE",
-		"authenticated": true,
-		"redirect": {
-			"method": "DELETE",
-			"path": "/api/v1/doc-importer/task/:task"
-		}
-	}]
+  "name": "#(service.name)",
+  "tags": [
+    "doc-importer",
+    "orchestrator"
+  ],
+  "endpoints": [
+    {
+      "path": "/v1/doc-importer/task",
+      "method": "GET",
+      "redirect": {
+        "method": "GET",
+        "path": "/api/v1/doc-importer/task"
+      }
+    },
+    {
+      "path": "/v1/doc-importer/task/:task",
+      "method": "GET",
+      "redirect": {
+        "method": "GET",
+        "path": "/api/v1/doc-importer/task/:task"
+      }
+    },
+    {
+      "path": "/v1/doc-importer/task/:task",
+      "method": "DELETE",
+      "authenticated": true,
+      "redirect": {
+        "method": "DELETE",
+        "path": "/api/v1/doc-importer/task/:task"
+      }
+    }
+  ]
 }

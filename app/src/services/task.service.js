@@ -6,6 +6,71 @@ const STATUS = require('app.constants').STATUS;
 
 class TaskService {
 
+    static getFilteredQuery(query) {
+        const allowedSearchFields = {
+            type: 'type',
+            status: 'status',
+            datasetId: 'datasetId',
+            createdAt: 'createdAt',
+            updatedAt: 'updatedAt',
+            createdBefore: 'createdAt',
+            createdAfter: 'createdAt',
+            updatedBefore: 'updatedAt',
+            updatedAfter: 'updatedAt'
+        };
+        const filteredQuery = {};
+
+        logger.debug('Object.keys(query)', Object.keys(query));
+        Object.keys(query).filter(param => allowedSearchFields.hasOwnProperty(param)).forEach((param) => {
+            switch (Task.schema.paths[allowedSearchFields[param]].instance) {
+
+                case 'String':
+                    filteredQuery[param] = {
+                        $regex: query[param],
+                        $options: 'i'
+                    };
+                    break;
+                case 'Array':
+                    if (query[param].indexOf('@') >= 0) {
+                        filteredQuery[param] = {
+                            $all: query[param].split('@').map(elem => elem.trim())
+                        };
+                    } else {
+                        filteredQuery[param] = {
+                            $in: query[param].split(',').map(elem => elem.trim())
+                        };
+                    }
+                    break;
+                case 'Mixed':
+                    filteredQuery[param] = { $ne: null };
+                    break;
+                case 'Date':
+                    filteredQuery[allowedSearchFields[param]] = filteredQuery[allowedSearchFields[param]] || {};
+                    switch (param) {
+
+                        case 'createdBefore':
+                        case 'updatedBefore':
+                            filteredQuery[allowedSearchFields[param]].$lte = new Date(query[param]);
+                            break;
+                        case 'createdAfter':
+                        case 'updatedAfter':
+                            filteredQuery[allowedSearchFields[param]].$gte = new Date(query[param]);
+                            break;
+                        default:
+                            filteredQuery[allowedSearchFields[param]].$eq = new Date(query[param]);
+                            break;
+
+                    }
+                    break;
+                default:
+
+            }
+        });
+        logger.debug(filteredQuery);
+        return filteredQuery;
+    }
+
+
     static async get(id) {
         logger.debug(`[TaskService]: Getting task with id: ${id}`);
         logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
@@ -71,7 +136,8 @@ class TaskService {
     static async getAll(query = {}) {
         logger.debug(`[TaskService]: Getting all tasks`);
         logger.debug(`[DBACCESS-FIND]: tasks`);
-        const tasks = await Task.find(query);
+        const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
+        const tasks = await Task.find(filteredQuery);
         return tasks;
     }
 
