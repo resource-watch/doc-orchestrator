@@ -1,6 +1,6 @@
 const logger = require('logger');
 const ctRegisterMicroservice = require('ct-register-microservice-node');
-const STATUS = require('app.constants').STATUS;
+const { STATUS } = require('app.constants');
 
 class DatasetService {
 

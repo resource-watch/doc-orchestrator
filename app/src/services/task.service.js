@@ -2,7 +2,7 @@ const logger = require('logger');
 const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
 const TaskAlreadyRunningError = require('errors/task-already-running.error');
-const STATUS = require('app.constants').STATUS;
+const { STATUS } = require('app.constants');
 
 class TaskService {
 
