@@ -15,6 +15,7 @@
   },
   "queues": {
     "docTasks": "DOC-TASKS-TEST",
+    "status": "DOC-STATUS-TEST",
     "executorTasks": "DOC-EXECUTOR-TASKS-TEST"
   }
 }
