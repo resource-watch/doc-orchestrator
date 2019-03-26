@@ -1,5 +1,5 @@
 FROM node:11.11-alpine
-MAINTAINER raul.requero@vizzuality.com
+MAINTAINER info@vizzuality.com
 
 ENV NAME doc-orchestrator
 ENV USER doc-orchestrator
