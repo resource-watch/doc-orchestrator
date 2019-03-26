@@ -10,7 +10,7 @@ const config = require('config');
 class TasksQueueService extends QueueService {
 
     constructor() {
-        super(config.get('queues.docTasks'), true);
+        super(config.get('queues.tasks'), true);
         this.taskMsg = {};
         this.task = {};
     }
@@ -47,7 +47,7 @@ class TasksQueueService extends QueueService {
     }
 
     async consume(msg) {
-        logger.info(`Message received in ${config.get('queues.docTasks')}`);
+        logger.info(`Message received in ${config.get('queues.tasks')}`);
         this.taskMsg = JSON.parse(msg.content.toString());
         try {
             // check if any task is currently running for this dataset
@@ -62,7 +62,7 @@ class TasksQueueService extends QueueService {
             await this.processMessage();
             // All OK -> msg sent, so ack emitted
             await this.channel.ack(msg);
-            logger.debug(`${config.get('queues.docTasks')} queue message acknowledged`);
+            logger.debug(`${config.get('queues.tasks')} queue message acknowledged`);
         } catch (err) {
             // Error creating entity or sending to queue
             logger.error(err);

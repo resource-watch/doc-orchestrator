@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars,no-undef */
+/* eslint-disable no-unused-vars,no-undef,no-await-in-loop */
 const nock = require('nock');
 const chai = require('chai');
 const amqp = require('amqplib');
@@ -7,8 +7,8 @@ const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task, execution } = require('rw-doc-importer-messages');
-const { getTestServer } = require('./test-server');
 const sleep = require('sleep');
+const { getTestServer } = require('./test-server');
 
 const should = chai.should();
 
@@ -31,7 +31,7 @@ describe('TASK_CREATE handling process', () => {
             try {
                 rabbitmqConnection = await amqp.connect(config.get('rabbitmq.url'));
             } catch (err) {
-                connectAttempts--;
+                connectAttempts -= 1;
                 await sleep.sleep(5);
             }
         }
@@ -40,7 +40,7 @@ describe('TASK_CREATE handling process', () => {
         }
 
         channel = await rabbitmqConnection.createConfirmChannel();
-        await channel.assertQueue(config.get('queues.docTasks'));
+        await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
@@ -49,15 +49,15 @@ describe('TASK_CREATE handling process', () => {
     });
 
     beforeEach(async () => {
-        await channel.purgeQueue(config.get('queues.docTasks'));
+        await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.docTasks'));
+        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         executorQueueStatus.messageCount.should.equal(0);
         docsQueueStatus.messageCount.should.equal(0);
 
-    })
+    });
 
     it('Consume a TASK_CREATE message and create a new task and EXECUTION_CREATE message (happy case)', async () => {
         const timestamp = new Date().getTime();
@@ -75,7 +75,7 @@ describe('TASK_CREATE handling process', () => {
             .once()
             .reply(200);
 
-        const preDocsQueueStatus = await channel.assertQueue(config.get('queues.docTasks'));
+        const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
         preDocsQueueStatus.messageCount.should.equal(0);
         const preQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
         preQueueStatus.messageCount.should.equal(0);
@@ -83,7 +83,7 @@ describe('TASK_CREATE handling process', () => {
         emptyTaskList.should.be.an('array').and.have.lengthOf(0);
 
 
-        await channel.sendToQueue(config.get('queues.docTasks'), Buffer.from(JSON.stringify(message)));
+        await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
         // Give the code 3 seconds to do its thing
         await new Promise(resolve => setTimeout(resolve, 3000));
@@ -122,9 +122,9 @@ describe('TASK_CREATE handling process', () => {
     });
 
     afterEach(async () => {
-        await channel.assertQueue(config.get('queues.docTasks'));
-        await channel.purgeQueue(config.get('queues.docTasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.docTasks'));
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.purgeQueue(config.get('queues.tasks'));
+        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         docsQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));

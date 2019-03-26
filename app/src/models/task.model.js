@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 const uuidV4 = require('uuid/v4');
-const Schema = mongoose.Schema;
 const { task } = require('rw-doc-importer-messages');
-const MESSAGE_TYPES = task.MESSAGE_TYPES;
-const STATUS = require('app.constants').STATUS;
+const { STATUS } = require('app.constants');
+
+const { Schema } = mongoose;
+const { MESSAGE_TYPES } = task;
 
 const Task = new Schema({
     _id: { type: String, default: uuidV4 },
