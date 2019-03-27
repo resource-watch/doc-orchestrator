@@ -4,13 +4,13 @@ const TaskService = require('services/task.service');
 const DatasetService = require('services/dataset.service');
 const { execution, status, task } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
-const { STATUS_QUEUE } = require('app.constants');
-const STATUS = require('app.constants').STATUS;
+const config = require('config');
+const { STATUS } = require('app.constants');
 
 class StatusQueueService extends QueueService {
 
     constructor() {
-        super(STATUS_QUEUE, true);
+        super(config.get('queues.status'), true);
         this.statusMsg = {};
         this.currentTask = {};
     }
@@ -20,7 +20,7 @@ class StatusQueueService extends QueueService {
             taskId: this.currentTask._id
         };
         this.currentTask = await TaskService.get(this.statusMsg.taskId);
-        props.forEach(prop => {
+        props.forEach((prop) => {
             const field = Object.keys(prop)[0];
             const dbField = prop[field];
             // message prop cases
@@ -174,44 +174,44 @@ class StatusQueueService extends QueueService {
 
         switch (this.statusMsg.type) {
 
-        case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
-            await this.indexCreated();
-            break;
-        case status.MESSAGE_TYPES.STATUS_READ_DATA:
-            await this.readData();
-            break;
-        case status.MESSAGE_TYPES.STATUS_BLOCKCHAIN_GENERATED:
-            await this.blockchainGenerated();
-            break;
-        case status.MESSAGE_TYPES.STATUS_READ_FILE:
-            await this.readFile();
-            break;
-        case status.MESSAGE_TYPES.STATUS_WRITTEN_DATA:
-            await this.writtenData();
-            break;
-        case status.MESSAGE_TYPES.STATUS_INDEX_DELETED:
-            await this.indexDeleted();
-            break;
-        case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY:
-            await this.performedDeleteQuery();
-            break;
-        case status.MESSAGE_TYPES.STATUS_FINISHED_DELETE_QUERY:
-            await this.finishedDeleteQuery();
-            break;
-        case status.MESSAGE_TYPES.STATUS_PERFORMED_REINDEX:
-            await this.performedReindex();
-            break;
-        case status.MESSAGE_TYPES.STATUS_FINISHED_REINDEX:
-            await this.finishedReindex();
-            break;
-        case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
-            await this.importConfirmed();
-            break;
-        case status.MESSAGE_TYPES.STATUS_ERROR:
-            await this.error();
-            break;
-        default:
-            logger.error('Status Message Type not valid');
+            case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
+                await this.indexCreated();
+                break;
+            case status.MESSAGE_TYPES.STATUS_READ_DATA:
+                await this.readData();
+                break;
+            case status.MESSAGE_TYPES.STATUS_BLOCKCHAIN_GENERATED:
+                await this.blockchainGenerated();
+                break;
+            case status.MESSAGE_TYPES.STATUS_READ_FILE:
+                await this.readFile();
+                break;
+            case status.MESSAGE_TYPES.STATUS_WRITTEN_DATA:
+                await this.writtenData();
+                break;
+            case status.MESSAGE_TYPES.STATUS_INDEX_DELETED:
+                await this.indexDeleted();
+                break;
+            case status.MESSAGE_TYPES.STATUS_PERFORMED_DELETE_QUERY:
+                await this.performedDeleteQuery();
+                break;
+            case status.MESSAGE_TYPES.STATUS_FINISHED_DELETE_QUERY:
+                await this.finishedDeleteQuery();
+                break;
+            case status.MESSAGE_TYPES.STATUS_PERFORMED_REINDEX:
+                await this.performedReindex();
+                break;
+            case status.MESSAGE_TYPES.STATUS_FINISHED_REINDEX:
+                await this.finishedReindex();
+                break;
+            case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
+                await this.importConfirmed();
+                break;
+            case status.MESSAGE_TYPES.STATUS_ERROR:
+                await this.error();
+                break;
+            default:
+                logger.error('Status Message Type not valid');
 
         }
     }

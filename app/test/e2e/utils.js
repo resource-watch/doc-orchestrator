@@ -1,3 +1,5 @@
+const uuidV4 = require('uuid/v4');
+
 function isArray(element) {
     if (element instanceof Array) {
         return true;
@@ -22,25 +24,25 @@ const deserializeTask = (response) => {
     return response;
 };
 
-const getUUID = () => Math.random().toString(36).substring(7);
-
-const createTask = (status, type, createdAt = new Date()) => {
-    const uuid = getUUID();
+const createTask = (status, type, createdAt = new Date(), reads = 0) => {
+    const uuid = uuidV4();
 
     return {
+        _id: uuidV4(),
         status,
-        reads: 0,
+        reads,
         writes: 0,
         logs: [],
         type,
         createdAt,
         updatedAt: createdAt,
         message: {
-            id: getUUID(),
+            id: uuidV4(),
             type,
             datasetId: uuid,
             provider: 'csv'
         },
+        index: uuidV4(),
         datasetId: uuid
     };
 };

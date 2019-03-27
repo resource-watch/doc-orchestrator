@@ -9,7 +9,8 @@
     "name": "Doc Importer Orchestrator"
   },
   "queues": {
-    "docTasks": "DOC-TASKS",
+    "tasks": "DOC-TASKS",
+    "status": "DOC-STATUS",
     "executorTasks": "DOC-EXECUTOR-TASKS"
   }
 }
