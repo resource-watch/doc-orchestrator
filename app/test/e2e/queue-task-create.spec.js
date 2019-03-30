@@ -119,6 +119,10 @@ describe('TASK_CREATE handling process', () => {
         createdTask.should.have.property('datasetId').and.equal(`${timestamp}`);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
+
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
     });
 
     afterEach(async () => {

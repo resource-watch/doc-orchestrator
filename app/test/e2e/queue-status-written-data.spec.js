@@ -6,7 +6,7 @@ const config = require('config');
 const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
-const { task } = require('rw-doc-importer-messages');
+const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
 const { getTestServer } = require('./test-server');
 const { createTask } = require('./utils');
@@ -153,6 +153,10 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
             await channel.ack(msg);
         };
+
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
 
         await channel.consume(config.get('queues.executorTasks'), validateExecutorTasksQueueMessages);
     });

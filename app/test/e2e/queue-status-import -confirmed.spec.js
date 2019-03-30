@@ -21,7 +21,7 @@ let channel;
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('STATUS_READ_DATA handling process', () => {
+describe('STATUS_IMPORT_CONFIRMED handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -62,13 +62,57 @@ describe('STATUS_READ_DATA handling process', () => {
 
     });
 
-    it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {
+    it('Consume a STATUS_IMPORT_CONFIRMED message should set task and dataset status to saved (happy case)', async () => {
         const fakeTask1 = await new Task(createTask(appConstants.STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
 
+        nock(process.env.CT_URL)
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1 })
+            .reply(200, {
+                data: {
+                    id: '6a994bd1-6f88-48dc-a08e-d8c1c90272c4',
+                    type: 'dataset',
+                    attributes: {
+                        name: 'Resource Watch datasets list',
+                        slug: 'Resource-Watch-datasets-list_25',
+                        type: null,
+                        subtitle: null,
+                        application: ['rw'],
+                        dataPath: 'data',
+                        attributesPath: null,
+                        connectorType: 'document',
+                        provider: 'json',
+                        userId: '1a10d7c6e0a37126611fd7a7',
+                        connectorUrl: 'http://api.resourcewatch.org/dataset',
+                        tableName: 'index_6a994bd16f8848dca08ed8c1c90272c4_1553925631066',
+                        status: 'saved',
+                        published: true,
+                        overwrite: false,
+                        verified: false,
+                        blockchain: {},
+                        mainDateField: null,
+                        env: 'production',
+                        geoInfo: false,
+                        protected: false,
+                        legend: {
+                            nested: [], country: [], region: [], date: []
+                        },
+                        clonedHost: {},
+                        errorMessage: '',
+                        taskId: '/v1/doc-importer/task/4e451d0e-a464-448f-9dc3-68cc493f0193',
+                        updatedAt: '2019-03-30T06:15:26.762Z',
+                        dataLastUpdated: null,
+                        widgetRelevantProps: [],
+                        layerRelevantProps: []
+                    }
+                }
+            });
+
+
         const message = {
-            id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
-            type: 'STATUS_READ_DATA',
-            taskId: fakeTask1.id
+            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
+            type: 'STATUS_IMPORT_CONFIRMED',
+            taskId: fakeTask1.id,
+            lastCheckedDate: '2019-03-29T08:43:08.091Z'
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -88,8 +132,8 @@ describe('STATUS_READ_DATA handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.INIT);
-        createdTask.should.have.property('reads').and.equal(1);
+        createdTask.should.have.property('status').and.equal(appConstants.STATUS.SAVED);
+        createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);

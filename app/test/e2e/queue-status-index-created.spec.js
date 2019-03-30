@@ -117,6 +117,10 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
+
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
     });
 
     afterEach(async () => {
