@@ -94,7 +94,22 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
                         geoInfo: false,
                         protected: false,
                         legend: {
-                            nested: [], country: [], region: [], date: []
+                            nested: [],
+                            country: [],
+                            region: [],
+                            date: [],
+                            integer: [],
+                            short: [],
+                            byte: [],
+                            double: [],
+                            float: [],
+                            half_float: [],
+                            scaled_float: [],
+                            boolean: [],
+                            binary: [],
+                            string: [],
+                            text: [],
+                            keyword: []
                         },
                         clonedHost: {},
                         errorMessage: '',
