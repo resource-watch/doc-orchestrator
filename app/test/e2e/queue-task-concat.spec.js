@@ -39,16 +39,19 @@ describe('TASK_CONCAT handling process', () => {
             throw new RabbitMQConnectionError();
         }
 
-        channel = await rabbitmqConnection.createConfirmChannel();
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.assertQueue(config.get('queues.executorTasks'));
-
         requester = await getTestServer();
 
         Task.remove({}).exec();
     });
 
     beforeEach(async () => {
+        channel = await rabbitmqConnection.createConfirmChannel();
+
+        await channel.assertQueue(config.get('queues.status'));
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.assertQueue(config.get('queues.executorTasks'));
+
+        await channel.purgeQueue(config.get('queues.status'));
         await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
@@ -56,7 +59,6 @@ describe('TASK_CONCAT handling process', () => {
         const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         executorQueueStatus.messageCount.should.equal(0);
         docsQueueStatus.messageCount.should.equal(0);
-
     });
 
     it('Consume a TASK_CONCAT message and create a new task and a EXECUTION_CREATE message (happy case)', async () => {
@@ -71,7 +73,7 @@ describe('TASK_CONCAT handling process', () => {
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846'
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
             .once()
             .reply(200);
@@ -102,7 +104,6 @@ describe('TASK_CONCAT handling process', () => {
             content.should.have.property('taskId').and.equal(message.id);
             content.should.have.property('index').and.match(new RegExp(`index_(\\w*)_(\\w*)`));
 
-
             await channel.ack(msg);
         };
 
@@ -128,7 +129,115 @@ describe('TASK_CONCAT handling process', () => {
         });
     });
 
+    it('Consume a TASK_CONCAT message while not being able to reach the dataset microservice (500) should retry 10 times and ot create a task nor issue additional messages', async () => {
+        const timestamp = new Date().getTime();
+
+        const message = {
+            id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
+            type: 'TASK_CONCAT',
+            datasetId: timestamp,
+            fileUrl: 'http://api.resourcewatch.org/dataset',
+            provider: 'json',
+            index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846'
+        };
+
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0
+            })
+            .times(11)
+            .reply(500, { error: 'dataset microservice unavailable' });
+
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: '',
+                status: 0
+            })
+            .times(11)
+            .reply(200, {});
+
+        const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
+        preDocsQueueStatus.messageCount.should.equal(0);
+        const preQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        preQueueStatus.messageCount.should.equal(0);
+        const emptyTaskList = await Task.find({}).exec();
+        emptyTaskList.should.be.an('array').and.have.lengthOf(0);
+
+
+        await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
+
+        // Give the code 3 seconds to do its thing
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        postQueueStatus.messageCount.should.equal(0);
+
+        const createdTasks = await Task.find({}).exec();
+
+        createdTasks.should.be.an('array').and.have.lengthOf(0);
+
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
+    });
+
+    it('Consume a TASK_CONCAT message while not being able to reach the dataset microservice (404) should retry 10 times and ot create a task nor issue additional messages', async () => {
+        const timestamp = new Date().getTime();
+
+        const message = {
+            id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
+            type: 'TASK_CONCAT',
+            datasetId: timestamp,
+            fileUrl: 'http://api.resourcewatch.org/dataset',
+            provider: 'json',
+            index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846'
+        };
+
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0
+            })
+            .times(11)
+            .reply(404, { error: 'dataset not found' });
+
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: '',
+                status: 0
+            })
+            .times(11)
+            .reply(200, {});
+
+        const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
+        preDocsQueueStatus.messageCount.should.equal(0);
+        const preQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        preQueueStatus.messageCount.should.equal(0);
+        const emptyTaskList = await Task.find({}).exec();
+        emptyTaskList.should.be.an('array').and.have.lengthOf(0);
+
+
+        await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
+
+        // Give the code 3 seconds to do its thing
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        postQueueStatus.messageCount.should.equal(0);
+
+        const createdTasks = await Task.find({}).exec();
+
+        createdTasks.should.be.an('array').and.have.lengthOf(0);
+
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
+    });
+
     afterEach(async () => {
+        Task.remove({}).exec();
+
         await channel.assertQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.tasks'));
         const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
@@ -140,13 +249,16 @@ describe('TASK_CONCAT handling process', () => {
         executorQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
-            throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
+            const pendingMocks = nock.pendingMocks();
+            nock.cleanAll();
+            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
+
+        await channel.close();
+        channel = null;
     });
 
     after(async () => {
-        Task.remove({}).exec();
-
         rabbitmqConnection.close();
     });
 });

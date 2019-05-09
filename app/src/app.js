@@ -30,7 +30,7 @@ async function init() {
                     retries -= 1;
                     logger.error(`Failed to connect to MongoDB uri ${mongoUri}, retrying...`);
                     sleep.sleep(5);
-                    mongoose.connect(mongoUri, onDbReady);
+                    mongoose.connect(mongoUri, { useNewUrlParser: true }, onDbReady);
                 } else {
                     logger.error('MongoURI', mongoUri);
                     logger.error(err);
@@ -99,7 +99,7 @@ async function init() {
         }
 
         logger.info(`Connecting to MongoDB URL ${mongoUri}`);
-        mongoose.connect(mongoUri, onDbReady);
+        mongoose.connect(mongoUri, { useNewUrlParser: true }, onDbReady);
     });
 }
 

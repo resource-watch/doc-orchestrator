@@ -14,12 +14,18 @@ class DatasetService {
         }
         logger.debug(`Updating dataset: ${JSON.stringify(dataset)}`);
 
-        await ctRegisterMicroservice.requestToMicroservice({
-            uri: `/dataset/${id}`,
-            method: 'PATCH',
-            json: true,
-            body: dataset
-        });
+
+        try {
+            return await ctRegisterMicroservice.requestToMicroservice({
+                uri: `/dataset/${id}`,
+                method: 'PATCH',
+                json: true,
+                body: dataset
+            });
+        } catch (e) {
+            logger.error('Error issuing request to the dataset microservice: ', e.message);
+            throw new Error(e);
+        }
     }
 
 }

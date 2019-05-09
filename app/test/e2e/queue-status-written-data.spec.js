@@ -44,6 +44,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
         channel = await rabbitmqConnection.createConfirmChannel();
         await channel.assertQueue(config.get('queues.status'));
+        await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
@@ -55,6 +56,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
     beforeEach(async () => {
         await channel.purgeQueue(config.get('queues.status'));
+        await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
@@ -173,7 +175,9 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         executorQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
-            throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
+            const pendingMocks = nock.pendingMocks();
+            nock.cleanAll();
+            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
     });
 
