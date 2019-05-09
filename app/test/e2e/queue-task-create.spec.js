@@ -39,21 +39,24 @@ describe('TASK_CREATE handling process', () => {
             throw new RabbitMQConnectionError();
         }
 
-        channel = await rabbitmqConnection.createConfirmChannel();
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.assertQueue(config.get('queues.executorTasks'));
-
         requester = await getTestServer();
 
         Task.remove({}).exec();
     });
 
     beforeEach(async () => {
+        channel = await rabbitmqConnection.createConfirmChannel();
+        await channel.assertQueue(config.get('queues.status'));
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.assertQueue(config.get('queues.executorTasks'));
+
+        await channel.purgeQueue(config.get('queues.status'));
         await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+
         executorQueueStatus.messageCount.should.equal(0);
         docsQueueStatus.messageCount.should.equal(0);
 
@@ -126,6 +129,8 @@ describe('TASK_CREATE handling process', () => {
     });
 
     afterEach(async () => {
+        Task.remove({}).exec();
+
         await channel.assertQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.tasks'));
         const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
@@ -137,13 +142,16 @@ describe('TASK_CREATE handling process', () => {
         executorQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
-            throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
+            const pendingMocks = nock.pendingMocks();
+            nock.cleanAll();
+            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
+
+        await channel.close();
+        channel = null;
     });
 
     after(async () => {
-        Task.remove({}).exec();
-
         rabbitmqConnection.close();
     });
 });

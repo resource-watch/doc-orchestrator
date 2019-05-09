@@ -67,7 +67,7 @@ class TasksQueueService extends QueueService {
             // Error creating entity or sending to queue
             logger.error(err);
             // Accept the message
-            this.channel.ack(msg);
+            await this.channel.ack(msg);
             // Delete mongo task entity
             await TaskService.delete(this.task._id);
             // Update DatasetService

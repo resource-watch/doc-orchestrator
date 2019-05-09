@@ -138,7 +138,9 @@ describe('TASK_OVERWRITE handling process', () => {
         executorQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
-            throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
+            const pendingMocks = nock.pendingMocks();
+            nock.cleanAll();
+            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
     });
 
