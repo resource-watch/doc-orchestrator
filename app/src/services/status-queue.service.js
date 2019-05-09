@@ -88,7 +88,7 @@ class StatusQueueService extends QueueService {
     }
 
     async indexDeleted() {
-        if ((this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT)) {
+        if ((this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX)) {
             // it comes from a DELETE INDEX, OVERWRITE TASK or CONCAT TASK
             await TaskService.update(this.currentTask._id, {
                 status: STATUS.INDEX_DELETED
@@ -157,7 +157,14 @@ class StatusQueueService extends QueueService {
         await DatasetService.update(this.currentTask.datasetId, {
             status: STATUS.FINISHED_REINDEX,
         });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+
+        await TaskService.update(this.currentTask._id, {
+            status: STATUS.SAVED
+        });
+        await DatasetService.update(this.currentTask.datasetId, {
+            status: STATUS.SAVED,
+        });
+        // await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
     }
 
     async error() {
