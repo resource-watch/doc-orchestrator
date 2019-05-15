@@ -112,7 +112,7 @@ describe('TASK_CREATE handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.INIT);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);

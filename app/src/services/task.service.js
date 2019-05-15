@@ -2,7 +2,7 @@ const logger = require('logger');
 const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
 const TaskAlreadyRunningError = require('errors/task-already-running.error');
-const { STATUS } = require('app.constants');
+const { TASK_STATUS } = require('app.constants');
 
 class TaskService {
 
@@ -21,7 +21,7 @@ class TaskService {
         const filteredQuery = {};
 
         logger.debug('Object.keys(query)', Object.keys(query));
-        Object.keys(query).filter(param => allowedSearchFields.hasOwnProperty(param)).forEach((param) => {
+        Object.keys(query).filter(param => Object.prototype.hasOwnProperty.call(allowedSearchFields, param)).forEach((param) => {
             switch (Task.schema.paths[allowedSearchFields[param]].instance) {
 
                 case 'String':
@@ -165,7 +165,7 @@ class TaskService {
         logger.debug(`[TaskService]: checking counter of task with id:  ${id}`);
         logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         const task = await TaskService.get(id);
-        if ((task.writes - task.reads === 0) && (task.status === STATUS.READ)) {
+        if ((task.writes - task.reads === 0) && (task.status === TASK_STATUS.READ)) {
             return true;
         }
         return false;
@@ -175,7 +175,7 @@ class TaskService {
         logger.debug(`[TaskService]: checking running task for datasetId:  ${datasetId}`);
         logger.debug(`[DBACCESS-FIND]: task.datasetId: ${datasetId}`);
         const tasks = await Task.find({ datasetId }).exec();
-        const runningTask = tasks.find(task => ((task.status !== STATUS.SAVED) && (task.status !== STATUS.ERROR)));
+        const runningTask = tasks.find(task => ((task.status !== TASK_STATUS.SAVED) && (task.status !== TASK_STATUS.ERROR)));
         if (runningTask) {
             throw new TaskAlreadyRunningError(`Task with datasetId '${datasetId}' already running`);
         }

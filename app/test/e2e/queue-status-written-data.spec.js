@@ -51,7 +51,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
         await Task.remove({}).exec();
 
-        fakeTask1 = await new Task(createTask(appConstants.STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
+        fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
     });
 
     beforeEach(async () => {
@@ -93,7 +93,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.READ);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
         createdTask.should.have.property('reads').and.equal(2);
         createdTask.should.have.property('writes').and.equal(1);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
@@ -135,7 +135,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.READ);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
         createdTask.should.have.property('reads').and.equal(2);
         createdTask.should.have.property('writes').and.equal(2);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(2);

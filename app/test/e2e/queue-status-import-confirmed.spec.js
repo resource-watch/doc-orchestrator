@@ -65,7 +65,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
     });
 
     it('Consume a STATUS_IMPORT_CONFIRMED message should set task and dataset status to saved (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
 
         nock(process.env.CT_URL)
             .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1 })
@@ -149,7 +149,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.SAVED);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);

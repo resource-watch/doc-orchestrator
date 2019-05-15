@@ -64,7 +64,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
     it('Consume a STATUS_INDEX_CREATED message and update dataset tableName and task (happy case)', async () => {
         const timestamp = new Date().getTime();
 
-        const fakeTask1 = await new Task(createTask(appConstants.STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
 
         const message = {
             id: 'db96457a-f083-4bda-a428-73ae974f5f22',
@@ -112,7 +112,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.INDEX_CREATED);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
