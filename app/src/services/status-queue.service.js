@@ -53,6 +53,18 @@ class StatusQueueService extends QueueService {
         await DatasetService.update(this.currentTask.datasetId, datasetProps);
     }
 
+    async indexDeactivated() {
+        if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
+            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+            await TaskService.resetCounters(this.currentTask._id);
+        }
+        await TaskService.update(this.currentTask._id, {
+            status: TASK_STATUS.INDEX_CREATED,
+            index: this.statusMsg.index
+        });
+        await DatasetService.update(this.currentTask.datasetId, { status: DATASET_STATUS.PENDING });
+    }
+
     async readData() {
         // Executor says that it's read a piece of data
         await TaskService.addRead(this.currentTask._id);
@@ -181,6 +193,9 @@ class StatusQueueService extends QueueService {
 
         switch (this.statusMsg.type) {
 
+            case status.MESSAGE_TYPES.STATUS_INDEX_DEACTIVATED:
+                await this.indexDeactivated();
+                break;
             case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
                 await this.indexCreated();
                 break;
