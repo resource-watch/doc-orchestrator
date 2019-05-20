@@ -1,13 +1,13 @@
 const logger = require('logger');
 const ctRegisterMicroservice = require('ct-register-microservice-node');
-const { STATUS } = require('app.constants');
+const { DATASET_STATUS } = require('app.constants');
 
 class DatasetService {
 
     static async update(id, dataset) {
-        if (dataset.status === STATUS.SAVED) {
+        if (dataset.status === DATASET_STATUS.SAVED) {
             dataset.status = 1;
-        } else if (dataset.status === STATUS.ERROR) {
+        } else if (dataset.status === DATASET_STATUS.ERROR) {
             dataset.status = 2;
         } else {
             dataset.status = 0;
@@ -27,7 +27,6 @@ class DatasetService {
             throw new Error(e);
         }
     }
-
 }
 
 module.exports = DatasetService;
