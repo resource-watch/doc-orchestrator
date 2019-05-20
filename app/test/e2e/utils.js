@@ -40,7 +40,8 @@ const createTask = (status, type, createdAt = new Date(), reads = 0) => {
             id: uuidV4(),
             type,
             datasetId: uuid,
-            provider: 'csv'
+            provider: 'csv',
+            index: uuidV4()
         },
         index: uuidV4(),
         datasetId: uuid

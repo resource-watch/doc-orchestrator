@@ -15,7 +15,7 @@ class StatusQueueService extends QueueService {
         this.currentTask = {};
     }
 
-    async sendExecutionTask(type, props) {
+    async sendExecutionTask(type, props = []) {
         const contentMsg = {
             taskId: this.currentTask._id
         };
@@ -100,16 +100,13 @@ class StatusQueueService extends QueueService {
     }
 
     async indexDeleted() {
-        if ((this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX)) {
-            // it comes from a DELETE INDEX, OVERWRITE TASK or CONCAT TASK
-            await TaskService.update(this.currentTask._id, {
-                status: TASK_STATUS.INDEX_DELETED
-            });
+        if (
+            (this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE)
+            || (this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX)
+            || (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT)
+        ) {
             await TaskService.update(this.currentTask._id, {
                 status: TASK_STATUS.SAVED
-            });
-            await DatasetService.update(this.currentTask.datasetId, {
-                status: DATASET_STATUS.SAVED,
             });
         } else {
             // if it caused by an error and The index was deleted due to an error
@@ -139,11 +136,10 @@ class StatusQueueService extends QueueService {
     }
 
     async importConfirmed() {
-        // it comes from overwrite
         if (this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
         } else if (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'index' }, { targetIndex: 'message.index' }]);
+            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }, { targetIndex: 'index' }]);
         } else {
             await TaskService.update(this.currentTask._id, {
                 status: TASK_STATUS.SAVED
@@ -157,26 +153,14 @@ class StatusQueueService extends QueueService {
     async performedReindex() {
         await TaskService.update(this.currentTask._id, {
             status: TASK_STATUS.PERFORMED_REINDEX,
-            elasticTaskId: this.statusMsg.elasticTaskId
-        });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }]);
-    }
-
-    async finishedReindex() {
-        await TaskService.update(this.currentTask._id, {
-            status: TASK_STATUS.FINISHED_REINDEX
-        });
-        await DatasetService.update(this.currentTask.datasetId, {
-            status: TASK_STATUS.FINISHED_REINDEX,
+            reindexResult: this.statusMsg.reindexResult
         });
 
-        await TaskService.update(this.currentTask._id, {
-            status: TASK_STATUS.SAVED
-        });
         await DatasetService.update(this.currentTask.datasetId, {
             status: DATASET_STATUS.SAVED,
+            tableName: this.currentTask.index
         });
-        // await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
     }
 
     async error() {
@@ -222,9 +206,6 @@ class StatusQueueService extends QueueService {
                 break;
             case status.MESSAGE_TYPES.STATUS_PERFORMED_REINDEX:
                 await this.performedReindex();
-                break;
-            case status.MESSAGE_TYPES.STATUS_FINISHED_REINDEX:
-                await this.finishedReindex();
                 break;
             case status.MESSAGE_TYPES.STATUS_IMPORT_CONFIRMED:
                 await this.importConfirmed();

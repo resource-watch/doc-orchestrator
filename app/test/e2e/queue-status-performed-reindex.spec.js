@@ -21,7 +21,7 @@ let channel;
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('STATUS_IMPORT_CONFIRMED handling process', () => {
+describe('STATUS_PERFORMED_REINDEX handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -64,11 +64,18 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
 
     });
 
-    it('Consume a STATUS_IMPORT_CONFIRMED message for a TASK_CREATE task should set task and dataset statuses to saved (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+    it('Consume a STATUS_PERFORMED_REINDEX message for a TASK_CONCAT should create a EXECUTION_REINDEX message (happy case)', async () => {
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CONCAT)).save();
+
+        const message = {
+            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
+            type: 'STATUS_PERFORMED_REINDEX',
+            taskId: fakeTask1.id,
+            lastCheckedDate: '2019-03-29T08:43:08.091Z'
+        };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1 })
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1, tableName: fakeTask1.index })
             .reply(200, {
                 data: {
                     id: '6a994bd1-6f88-48dc-a08e-d8c1c90272c4',
@@ -85,7 +92,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
                         provider: 'json',
                         userId: '1a10d7c6e0a37126611fd7a7',
                         connectorUrl: 'http://api.resourcewatch.org/dataset',
-                        tableName: 'index_6a994bd16f8848dca08ed8c1c90272c4_1553925631066',
+                        tableName: fakeTask1.index,
                         status: 'saved',
                         published: true,
                         overwrite: false,
@@ -124,14 +131,6 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
                 }
             });
 
-
-        const message = {
-            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
-            type: 'STATUS_IMPORT_CONFIRMED',
-            taskId: fakeTask1.id,
-            lastCheckedDate: '2019-03-29T08:43:08.091Z'
-        };
-
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
         preStatusQueueStatus.messageCount.should.equal(0);
         const existingTaskList = await Task.find({}).exec();
@@ -149,66 +148,28 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.PERFORMED_REINDEX);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
-        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
-        createdTask.should.have.property('message').and.be.an('object');
-        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
-        createdTask.should.have.property('createdAt').and.be.a('date');
-        createdTask.should.have.property('updatedAt').and.be.a('date');
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
-    });
-
-    it('Consume a STATUS_IMPORT_CONFIRMED message for a TASK_CONCAT should create a EXECUTION_REINDEX message (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CONCAT)).save();
-
-        const message = {
-            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
-            type: 'STATUS_IMPORT_CONFIRMED',
-            taskId: fakeTask1.id,
-            lastCheckedDate: '2019-03-29T08:43:08.091Z'
-        };
-
-        const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        preStatusQueueStatus.messageCount.should.equal(0);
-        const existingTaskList = await Task.find({}).exec();
-        existingTaskList.should.be.an('array').and.have.lengthOf(1);
-
-        await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
-
-        // Give the code 3 seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        postQueueStatus.messageCount.should.equal(0);
-
-        const createdTasks = await Task.find({}).exec();
-
-        createdTasks.should.be.an('array').and.have.lengthOf(1);
-        const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
-        createdTask.should.have.property('reads').and.equal(0);
-        createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
         createdTask.should.have.property('message').and.be.an('object');
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+
+        const log = createdTask.logs[0];
+
+        log.should.have.property('id').and.equal(message.id);
+        log.should.have.property('taskId').and.equal(message.taskId);
+        log.should.have.property('type').and.equal(message.type);
 
         const validateExecutorTasksQueueMessages = async (msg) => {
             const content = JSON.parse(msg.content.toString());
             content.should.have.property('id');
-            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_REINDEX);
-            content.should.have.property('sourceIndex').and.equal(fakeTask1.message.index);
-            content.should.have.property('targetIndex').and.equal(fakeTask1.index);
+            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX);
+            content.should.have.property('index').and.equal(fakeTask1.message.index);
             content.should.have.property('taskId').and.equal(message.taskId);
 
             await channel.ack(msg);
