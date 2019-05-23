@@ -38,7 +38,7 @@
     "bunyan": "1.8.12",
     "config": "2.0.1",
     "ct-register-microservice-node": "^2.1.7",
-    "rw-doc-importer-messages": "1.1.0",
+    "rw-doc-importer-messages": "^1.2.0",
     "koa": "2.5.2",
     "koa-logger": "3.2.0",
     "koa-mount": "3.0.0",
@@ -47,5 +47,8 @@
     "request": "2.88.0",
     "request-promise": "4.2.2",
     "uuid": "3.3.2"
+  },
+  "engines": {
+    "node": ">=11 <12"
   }
 }
