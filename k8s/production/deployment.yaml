@@ -60,6 +60,11 @@ spec:
                 secretKeyRef:
                   name: dbsecrets
                   key: DOC_ORCHESTRATOR_MONGO_URI
+          - name: ELASTIC_URL
+            valueFrom:
+                secretKeyRef:
+                  name: dbsecrets
+                  key: ELASTIC_URI
 
         ports:
           - containerPort: 5000

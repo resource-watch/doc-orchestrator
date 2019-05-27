@@ -31,21 +31,22 @@
     "nodemon": "^1.18.10"
   },
   "dependencies": {
-    "bluebird": "^3.4.7",
-    "koa-body": "^2.0.0",
-    "sleep": "^5.2.3",
+    "@elastic/elasticsearch": "^5.6.18",
     "amqplib": "0.5.2",
+    "bluebird": "^3.4.7",
     "bunyan": "1.8.12",
     "config": "2.0.1",
     "ct-register-microservice-node": "^2.1.7",
-    "rw-doc-importer-messages": "^1.2.0",
     "koa": "2.5.2",
+    "koa-body": "^2.0.0",
     "koa-logger": "3.2.0",
     "koa-mount": "3.0.0",
     "koa-router": "7.4.0",
     "mongoose": "5.2.14",
     "request": "2.88.0",
     "request-promise": "4.2.2",
+    "rw-doc-importer-messages": "^1.2.0",
+    "sleep": "^5.2.3",
     "uuid": "3.3.2"
   },
   "engines": {
