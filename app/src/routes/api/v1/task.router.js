@@ -2,7 +2,6 @@ const Router = require('koa-router');
 const logger = require('logger');
 const TaskService = require('services/task.service');
 const TaskSerializer = require('serializers/task.serializer');
-const elasticService = require('services/elastic.service');
 const TaskNotFound = require('errors/task-not-found.error');
 
 const router = new Router({
@@ -24,24 +23,6 @@ class TaskRouter {
         logger.info(`[TaskRouter] Getting task with id: ${id}`);
         try {
             const task = await TaskService.get(id);
-
-            const promises = task.logs.map(async (log, index) => {
-                if (!log.elasticTaskId) {
-                    return Promise.resolve();
-                }
-                logger.debug(`[TaskRouter] Getting Elasticsearch task data for elasticsearchTaskIds: ${log.elasticTaskId}`);
-
-
-                try {
-                    task.logs[index].elasticTaskStatus = await elasticService.getTaskStatus(log.elasticTaskId);
-                } catch (err) {
-                    task.logs[index].elasticTaskStatus = err;
-                }
-
-                return Promise.resolve();
-            });
-
-            await Promise.all(promises);
 
             ctx.body = TaskSerializer.serialize(task);
         } catch (err) {

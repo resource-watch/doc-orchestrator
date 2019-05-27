@@ -3,6 +3,7 @@ const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
 const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { TASK_STATUS } = require('app.constants');
+const elasticService = require('services/elastic.service');
 
 class TaskService {
 
@@ -79,6 +80,23 @@ class TaskService {
             logger.error(`[TaskService]: Task with id ${id} not found`);
             throw new TaskNotFound(`Task with id '${id}' not found`);
         }
+
+        await Promise.all(task.logs.map(async (log, index) => {
+            if (!log.elasticTaskId) {
+                return Promise.resolve();
+            }
+            logger.debug(`[TaskRouter] Getting Elasticsearch task data for elasticsearchTaskIds: ${log.elasticTaskId}`);
+
+
+            try {
+                task.logs[index].elasticTaskStatus = await elasticService.getTaskStatus(log.elasticTaskId);
+            } catch (err) {
+                task.logs[index].elasticTaskStatus = err;
+            }
+
+            return Promise.resolve();
+        }));
+
         return task;
     }
 
@@ -138,6 +156,25 @@ class TaskService {
         logger.debug(`[DBACCESS-FIND]: tasks`);
         const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
         const tasks = await Task.find(filteredQuery);
+
+        await Promise.all(tasks.map(async (task) => {
+            await Promise.all(task.logs.map(async (log, logIndex) => {
+                if (!log.elasticTaskId) {
+                    return Promise.resolve();
+                }
+                logger.debug(`[TaskRouter] Getting Elasticsearch task data for elasticsearchTaskIds: ${log.elasticTaskId}`);
+
+
+                try {
+                    task.logs[logIndex].elasticTaskStatus = await elasticService.getTaskStatus(log.elasticTaskId);
+                } catch (err) {
+                    task.logs[logIndex].elasticTaskStatus = err;
+                }
+
+                return Promise.resolve();
+            }));
+        }));
+
         return tasks;
     }
 
