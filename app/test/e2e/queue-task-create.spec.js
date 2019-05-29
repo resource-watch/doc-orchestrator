@@ -40,12 +40,11 @@ describe('TASK_CREATE handling process', () => {
         }
 
         requester = await getTestServer();
-
-        Task.remove({}).exec();
     });
 
     beforeEach(async () => {
         channel = await rabbitmqConnection.createConfirmChannel();
+
         await channel.assertQueue(config.get('queues.status'));
         await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
@@ -54,12 +53,16 @@ describe('TASK_CREATE handling process', () => {
         await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
-        const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
+        statusQueueStatus.messageCount.should.equal(0);
 
-        executorQueueStatus.messageCount.should.equal(0);
-        docsQueueStatus.messageCount.should.equal(0);
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
 
+        const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
+        executorTasksQueueStatus.messageCount.should.equal(0);
+
+        Task.remove({}).exec();
     });
 
     it('Consume a TASK_CREATE message and create a new task and EXECUTION_CREATE message (happy case)', async () => {
@@ -131,15 +134,21 @@ describe('TASK_CREATE handling process', () => {
     afterEach(async () => {
         Task.remove({}).exec();
 
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        docsQueueStatus.messageCount.should.equal(0);
+        await channel.assertQueue(config.get('queues.status'));
+        await channel.purgeQueue(config.get('queues.status'));
+        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
+        statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
+
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.purgeQueue(config.get('queues.tasks'));
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
 
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();

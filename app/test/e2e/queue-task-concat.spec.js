@@ -40,8 +40,6 @@ describe('TASK_CONCAT handling process', () => {
         }
 
         requester = await getTestServer();
-
-        Task.remove({}).exec();
     });
 
     beforeEach(async () => {
@@ -55,10 +53,16 @@ describe('TASK_CONCAT handling process', () => {
         await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
-        const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        executorQueueStatus.messageCount.should.equal(0);
-        docsQueueStatus.messageCount.should.equal(0);
+        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
+        statusQueueStatus.messageCount.should.equal(0);
+
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
+        const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
+        executorTasksQueueStatus.messageCount.should.equal(0);
+
+        Task.remove({}).exec();
     });
 
     it('Consume a TASK_CONCAT message and create a new task and a EXECUTION_CREATE message (happy case)', async () => {
@@ -238,15 +242,21 @@ describe('TASK_CONCAT handling process', () => {
     afterEach(async () => {
         Task.remove({}).exec();
 
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        docsQueueStatus.messageCount.should.equal(0);
+        await channel.assertQueue(config.get('queues.status'));
+        await channel.purgeQueue(config.get('queues.status'));
+        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
+        statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
+
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.purgeQueue(config.get('queues.tasks'));
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
 
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
