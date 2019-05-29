@@ -127,15 +127,23 @@ describe('TASK_OVERWRITE handling process', () => {
     });
 
     afterEach(async () => {
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
-        const docsQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        docsQueueStatus.messageCount.should.equal(0);
+        Task.remove({}).exec();
+
+        await channel.assertQueue(config.get('queues.status'));
+        await channel.purgeQueue(config.get('queues.status'));
+        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
+        statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
+
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.purgeQueue(config.get('queues.tasks'));
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
 
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();

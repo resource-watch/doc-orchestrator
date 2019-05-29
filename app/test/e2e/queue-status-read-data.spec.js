@@ -47,8 +47,6 @@ describe('STATUS_READ_DATA handling process', () => {
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
-
-        Task.remove({}).exec();
     });
 
     beforeEach(async () => {
@@ -59,9 +57,13 @@ describe('STATUS_READ_DATA handling process', () => {
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
+        Task.remove({}).exec();
     });
 
     it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {

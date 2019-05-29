@@ -47,8 +47,6 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
-
-        Task.remove({}).exec();
     });
 
     beforeEach(async () => {
@@ -59,9 +57,13 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
+        Task.remove({}).exec();
     });
 
     it('Consume a STATUS_FINISHED_REINDEX message for a TASK_CONCAT should create a EXECUTION_CONFIRM_REINDEX message (happy case)', async () => {

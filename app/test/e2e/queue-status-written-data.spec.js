@@ -17,7 +17,7 @@ let requester;
 let rabbitmqConnection = null;
 let channel;
 
-let fakeTask1;
+// let fakeTask1;
 
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
@@ -48,10 +48,6 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
-
-        await Task.remove({}).exec();
-
-        fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
     });
 
     beforeEach(async () => {
@@ -62,12 +58,18 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
+        await Task.remove({}).exec();
     });
 
     it('Consume a STATUS_WRITTEN_DATA message should update task read count (happy case, not last write)', async () => {
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
+
         const message = {
             id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
             type: 'STATUS_WRITTEN_DATA',
@@ -117,6 +119,8 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     it('Consume a STATUS_WRITTEN_DATA message should update task read count (happy case, last write)', async () => {
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
+
         const message = {
             id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
             type: 'STATUS_WRITTEN_DATA',
@@ -140,7 +144,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         postQueueStatus.messageCount.should.equal(0);
 
         const postExecutorTasksStatus = await channel.assertQueue(config.get('queues.executorTasks'));
-        postExecutorTasksStatus.messageCount.should.equal(1);
+        postExecutorTasksStatus.messageCount.should.equal(0);
 
         const createdTasks = await Task.find({}).exec();
 
@@ -148,8 +152,8 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         const createdTask = createdTasks[0];
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
         createdTask.should.have.property('reads').and.equal(2);
-        createdTask.should.have.property('writes').and.equal(2);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(2);
+        createdTask.should.have.property('writes').and.equal(1);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
         createdTask.should.have.property('message').and.be.an('object');
@@ -175,6 +179,8 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     afterEach(async () => {
+        Task.remove({}).exec();
+
         await channel.assertQueue(config.get('queues.status'));
         await channel.purgeQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
@@ -185,6 +191,11 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.purgeQueue(config.get('queues.tasks'));
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
             nock.cleanAll();
@@ -193,8 +204,6 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     after(async () => {
-        Task.remove({}).exec();
-
         rabbitmqConnection.close();
     });
 });
