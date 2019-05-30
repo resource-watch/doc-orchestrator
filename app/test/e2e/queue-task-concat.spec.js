@@ -93,7 +93,7 @@ describe('TASK_CONCAT handling process', () => {
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
         // Give the code 3 seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
         postQueueStatus.messageCount.should.equal(1);
