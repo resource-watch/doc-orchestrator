@@ -143,17 +143,23 @@ class StatusQueueService extends QueueService {
     }
 
     async importConfirmed() {
-        if (this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
-        } else if (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }, { targetIndex: 'index' }]);
-        } else {
-            await TaskService.update(this.currentTask._id, {
-                status: TASK_STATUS.SAVED
-            });
-            await DatasetService.update(this.currentTask.datasetId, {
-                status: DATASET_STATUS.SAVED,
-            });
+        switch (this.currentTask.type) {
+
+            case task.MESSAGE_TYPES.TASK_OVERWRITE:
+                await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
+                break;
+            case task.MESSAGE_TYPES.TASK_CONCAT:
+                await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }, { targetIndex: 'index' }]);
+                break;
+            default:
+                await TaskService.update(this.currentTask._id, {
+                    status: TASK_STATUS.SAVED
+                });
+                await DatasetService.update(this.currentTask.datasetId, {
+                    status: DATASET_STATUS.SAVED
+                });
+                break;
+
         }
     }
 
