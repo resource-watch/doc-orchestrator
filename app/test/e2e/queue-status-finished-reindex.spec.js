@@ -81,7 +81,7 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
             .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1, tableName: fakeTask1.index })
             .reply(200, {
                 data: {
-                    id: '6a994bd1-6f88-48dc-a08e-d8c1c90272c4',
+                    id: fakeTask1.datasetId,
                     type: 'dataset',
                     attributes: {
                         name: 'Resource Watch datasets list',
@@ -168,23 +168,6 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
         log.should.have.property('id').and.equal(message.id);
         log.should.have.property('taskId').and.equal(message.taskId);
         log.should.have.property('type').and.equal(message.type);
-
-
-        const validateExecutorTasksQueueMessages = async (msg) => {
-            const content = JSON.parse(msg.content.toString());
-            content.should.have.property('id');
-            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX);
-            content.should.have.property('taskId').and.equal(message.taskId);
-            content.should.have.property('index').and.equal(fakeTask1.message.index);
-
-            await channel.ack(msg);
-        };
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
-
-        await channel.consume(config.get('queues.executorTasks'), validateExecutorTasksQueueMessages);
     });
 
     afterEach(async () => {

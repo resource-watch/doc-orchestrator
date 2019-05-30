@@ -45,7 +45,7 @@
     "mongoose": "5.2.14",
     "request": "2.88.0",
     "request-promise": "4.2.2",
-    "rw-doc-importer-messages": "^1.2.0",
+    "rw-doc-importer-messages": "1.2.1",
     "sleep": "^5.2.3",
     "uuid": "3.3.2"
   },
