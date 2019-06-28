@@ -11,6 +11,10 @@ exports.getTestServer = async function getTestServer() {
         return requester;
     }
 
+    nock(`http://${process.env.ELASTIC_URL}`)
+        .head('/')
+        .reply(200);
+
     nock(`${process.env.CT_URL}`)
         .post(`/api/v1/microservice`)
         .reply(200);

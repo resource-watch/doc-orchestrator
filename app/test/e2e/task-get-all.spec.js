@@ -346,9 +346,101 @@ describe('Task get all tests', () => {
         task1.should.have.property('type').and.equal(fakeTask1.type);
     });
 
+
+    it('Get a list of existent tasks should return 200 with the existing tasks', async () => {
+        const elasticTaskResponseObject = {
+            completed: true,
+            task: {
+                node: 'dmv1LILaTX-12NIPKcK3BQ',
+                id: 1440921,
+                type: 'transport',
+                action: 'indices:data/write/reindex',
+                status: {
+                    total: 100401,
+                    updated: 0,
+                    created: 100401,
+                    deleted: 0,
+                    batches: 101,
+                    version_conflicts: 0,
+                    noops: 0,
+                    retries: {
+                        bulk: 0,
+                        search: 0
+                    },
+                    throttled_millis: 0,
+                    requests_per_second: -1.0,
+                    throttled_until_millis: 0
+                },
+                description: 'reindex from [index_50598b08c2b44db58b211b89cdb5b45d_1558614485391] to [index_50598b08c2b44db58b211b89cdb5b45d_1558678517870]',
+                start_time_in_millis: 1558678595813,
+                running_time_in_nanos: 41651527569,
+                cancellable: true
+            },
+            response: {
+                took: 41651,
+                timed_out: false,
+                total: 100401,
+                updated: 0,
+                created: 100401,
+                deleted: 0,
+                batches: 101,
+                version_conflicts: 0,
+                noops: 0,
+                retries: {
+                    bulk: 0,
+                    search: 0
+                },
+                throttled_millis: 0,
+                requests_per_second: -1.0,
+                throttled_until_millis: 0,
+                failures: []
+            }
+        };
+
+        const fakeTask4 = await new Task(createTask('ERROR', 'TASK_CREATE', new Date('2019-02-01'))).save();
+
+        fakeTask4.logs = [
+            {
+                id: '782177aa-fb56-4cf9-bf2c-a9d2cc435a13',
+                type: 'STATUS_PERFORMED_REINDEX',
+                taskId: '76836c30-7e9f-4537-9e7e-fc33aeabfab4',
+                lastCheckedDate: '2019-05-24T06:16:35.815Z',
+                elasticTaskId: 'dmv1LILaTX-12NIPKcK3BQ:1440921'
+            }];
+        await fakeTask4.save();
+
+        nock(`http://${process.env.ELASTIC_URL}`)
+            .get(`/_tasks/${encodeURIComponent(fakeTask4.logs[0].elasticTaskId)}`)
+            .reply(200, elasticTaskResponseObject);
+
+        const response = await requester
+            .get(`/api/v1/doc-importer/task`)
+            .send();
+
+        response.status.should.equal(200);
+        response.body.should.have.property('data').and.be.an('array').and.have.length(4);
+
+        const responseTasks = deserializeTask(response);
+        const task1 = responseTasks[3];
+
+        task1.should.have.property('datasetId').and.equal(fakeTask4.datasetId);
+        task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+        task1.should.have.property('reads').and.equal(0);
+        task1.should.have.property('writes').and.equal(0);
+        task1.should.have.property('message').and.be.an('object');
+        task1.should.have.property('status').and.equal(fakeTask4.status);
+        task1.should.have.property('type').and.equal(fakeTask4.type);
+
+        const log = task1.logs[0];
+        log.should.have.property('elasticTaskId').and.be.a('string').and.equal('dmv1LILaTX-12NIPKcK3BQ:1440921');
+        log.should.have.property('elasticTaskStatus').and.be.an('object').and.deep.equal(elasticTaskResponseObject);
+    });
+
     afterEach(() => {
         if (!nock.isDone()) {
-            throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
+            const pendingMocks = nock.pendingMocks();
+            nock.cleanAll();
+            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
     });
 

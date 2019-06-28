@@ -1,13 +1,19 @@
 {
-    "service": {
-        "port": "PORT"
-    },
-    "rabbitmq":{
-        "url": "RABBITMQ_URL"
-    },
-    "mongodb": {
-        "host": "MONGO_PORT_27017_TCP_ADDR",
-        "port": "MONGO_PORT_27017_TCP_PORT",
-        "database": "MONGO_DATABASE"
-    }
+  "service": {
+    "port": "PORT"
+  },
+  "rabbitmq": {
+    "url": "RABBITMQ_URL"
+  },
+  "mongodb": {
+    "host": "MONGO_PORT_27017_TCP_ADDR",
+    "port": "MONGO_PORT_27017_TCP_PORT",
+    "database": "MONGO_DATABASE"
+  },
+  "elastic": {
+    "url": "ELASTIC_URL"
+  },
+  "logger": {
+    "level": "LOGGER_LEVEL"
+  }
 }

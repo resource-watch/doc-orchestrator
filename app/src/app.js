@@ -8,6 +8,9 @@ const ErrorSerializer = require('serializers/error.serializer');
 const ctRegisterMicroservice = require('ct-register-microservice-node');
 const mongoose = require('mongoose');
 
+// const nock = require('nock');
+// nock.recorder.rec();
+
 const mongoUri = process.env.MONGO_URI || `mongodb://${config.get('mongodb.host')}:${config.get('mongodb.port')}/${config.get('mongodb.database')}`;
 
 const koaBody = require('koa-body')({
@@ -27,7 +30,7 @@ async function init() {
                     retries -= 1;
                     logger.error(`Failed to connect to MongoDB uri ${mongoUri}, retrying...`);
                     sleep.sleep(5);
-                    mongoose.connect(mongoUri, onDbReady);
+                    mongoose.connect(mongoUri, { useNewUrlParser: true }, onDbReady);
                 } else {
                     logger.error('MongoURI', mongoUri);
                     logger.error(err);
@@ -96,7 +99,7 @@ async function init() {
         }
 
         logger.info(`Connecting to MongoDB URL ${mongoUri}`);
-        mongoose.connect(mongoUri, onDbReady);
+        mongoose.connect(mongoUri, { useNewUrlParser: true }, onDbReady);
     });
 }
 

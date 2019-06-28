@@ -23,6 +23,7 @@ class TaskRouter {
         logger.info(`[TaskRouter] Getting task with id: ${id}`);
         try {
             const task = await TaskService.get(id);
+
             ctx.body = TaskSerializer.serialize(task);
         } catch (err) {
             if (err instanceof TaskNotFound) {

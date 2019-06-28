@@ -17,10 +17,11 @@ let requester;
 let rabbitmqConnection = null;
 let channel;
 
+
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('STATUS_INDEX_CREATED handling process', () => {
+describe('STATUS_FINISHED_REINDEX handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -41,14 +42,11 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         }
 
         channel = await rabbitmqConnection.createConfirmChannel();
-
         await channel.assertQueue(config.get('queues.status'));
         await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
-
-        Task.remove({}).exec();
     });
 
     beforeEach(async () => {
@@ -68,30 +66,78 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         Task.remove({}).exec();
     });
 
-    it('Consume a STATUS_INDEX_CREATED message and update dataset tableName and task (happy case)', async () => {
-        const timestamp = new Date().getTime();
-
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+    it('Consume a STATUS_FINISHED_REINDEX message for a TASK_CONCAT should create a EXECUTION_CONFIRM_REINDEX message (happy case)', async () => {
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CONCAT)).save();
 
         const message = {
-            id: 'db96457a-f083-4bda-a428-73ae974f5f22',
-            type: 'STATUS_INDEX_CREATED',
+            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
+            type: 'STATUS_FINISHED_REINDEX',
             taskId: fakeTask1.id,
-            index: 'index_1552479168458_1552479168503'
+            lastCheckedDate: '2019-03-29T08:43:08.091Z',
+            elasticTaskId: '123456'
         };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${fakeTask1.datasetId}`, {
-                status: 0,
-                tableName: 'index_1552479168458_1552479168503'
-            })
-            .once()
-            .reply(200);
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1, tableName: fakeTask1.index })
+            .reply(200, {
+                data: {
+                    id: fakeTask1.datasetId,
+                    type: 'dataset',
+                    attributes: {
+                        name: 'Resource Watch datasets list',
+                        slug: 'Resource-Watch-datasets-list_25',
+                        type: null,
+                        subtitle: null,
+                        application: ['rw'],
+                        dataPath: 'data',
+                        attributesPath: null,
+                        connectorType: 'document',
+                        provider: 'json',
+                        userId: '1a10d7c6e0a37126611fd7a7',
+                        connectorUrl: 'http://api.resourcewatch.org/dataset',
+                        tableName: fakeTask1.index,
+                        status: 'saved',
+                        published: true,
+                        overwrite: false,
+                        verified: false,
+                        blockchain: {},
+                        mainDateField: null,
+                        env: 'production',
+                        geoInfo: false,
+                        protected: false,
+                        legend: {
+                            nested: [],
+                            country: [],
+                            region: [],
+                            date: [],
+                            integer: [],
+                            short: [],
+                            byte: [],
+                            double: [],
+                            float: [],
+                            half_float: [],
+                            scaled_float: [],
+                            boolean: [],
+                            binary: [],
+                            string: [],
+                            text: [],
+                            keyword: []
+                        },
+                        clonedHost: {},
+                        errorMessage: '',
+                        taskId: '/v1/doc-importer/task/4e451d0e-a464-448f-9dc3-68cc493f0193',
+                        updatedAt: '2019-03-30T06:15:26.762Z',
+                        dataLastUpdated: null,
+                        widgetRelevantProps: [],
+                        layerRelevantProps: []
+                    }
+                }
+            });
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
         preStatusQueueStatus.messageCount.should.equal(0);
-        const emptyTaskList = await Task.find({}).exec();
-        emptyTaskList.should.be.an('array').and.have.lengthOf(1);
+        const existingTaskList = await Task.find({}).exec();
+        existingTaskList.should.be.an('array').and.have.lengthOf(1);
 
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
@@ -101,38 +147,27 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);
 
-        const validateMessage = async (msg) => {
-            const content = JSON.parse(msg.content.toString());
-            content.should.have.property('datasetId').and.equal(timestamp);
-            content.should.have.property('id');
-            content.should.have.property('fileUrl');
-            content.should.have.property('provider').and.equal('csv');
-            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_CREATE);
-            content.should.have.property('taskId').and.equal(message.id);
-
-            await channel.ack(msg);
-        };
-
-        await channel.consume(config.get('queues.status'), validateMessage);
-
         const createdTasks = await Task.find({}).exec();
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
+        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('message').and.be.an('object');
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
+        const log = createdTask.logs[0];
+
+        log.should.have.property('id').and.equal(message.id);
+        log.should.have.property('taskId').and.equal(message.taskId);
+        log.should.have.property('type').and.equal(message.type);
     });
 
     afterEach(async () => {
@@ -148,21 +183,15 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
-        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        tasksQueueStatus.messageCount.should.equal(0);
-
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
             nock.cleanAll();
             throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
+
     });
 
     after(async () => {
-        Task.remove({}).exec();
-
         rabbitmqConnection.close();
     });
 });

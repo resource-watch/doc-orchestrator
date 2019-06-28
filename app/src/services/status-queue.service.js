@@ -5,7 +5,7 @@ const DatasetService = require('services/dataset.service');
 const { execution, status, task } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const config = require('config');
-const { STATUS } = require('app.constants');
+const { TASK_STATUS, DATASET_STATUS } = require('app.constants');
 
 class StatusQueueService extends QueueService {
 
@@ -40,17 +40,29 @@ class StatusQueueService extends QueueService {
             await TaskService.resetCounters(this.currentTask._id);
         }
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.INDEX_CREATED,
+            status: TASK_STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
         // update the dataset
         const datasetProps = {
-            status: STATUS.INDEX_CREATED,
+            status: DATASET_STATUS.PENDING,
         };
         if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CONCAT) {
             datasetProps.tableName = this.statusMsg.index;
         }
         await DatasetService.update(this.currentTask.datasetId, datasetProps);
+    }
+
+    async indexDeactivated() {
+        if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
+            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+            await TaskService.resetCounters(this.currentTask._id);
+        }
+        await TaskService.update(this.currentTask._id, {
+            status: TASK_STATUS.INDEX_CREATED,
+            index: this.statusMsg.index
+        });
+        await DatasetService.update(this.currentTask.datasetId, { status: DATASET_STATUS.PENDING });
     }
 
     async readData() {
@@ -67,7 +79,7 @@ class StatusQueueService extends QueueService {
     async readFile() {
         // The file has been read completely, just update the status
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.READ
+            status: TASK_STATUS.READ
         });
         const finished = await TaskService.checkCounter(this.statusMsg.taskId);
         if (finished) {
@@ -79,7 +91,7 @@ class StatusQueueService extends QueueService {
     async writtenData() {
         // add write +1
         await TaskService.addWrite(this.statusMsg.taskId);
-        // AND NOW CHECK IF WRITES-READS == 0 and STATUS == READ
+        // AND NOW CHECK IF WRITES-READS == 0 and TASK_STATUS == READ
         const finished = await TaskService.checkCounter(this.statusMsg.taskId);
         if (finished) {
             // Sending confirm index creation
@@ -88,16 +100,20 @@ class StatusQueueService extends QueueService {
     }
 
     async indexDeleted() {
-        if ((this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX) || (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT)) {
+        if (
+            this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE
+            || this.currentTask.type === task.MESSAGE_TYPES.TASK_DELETE_INDEX
+            || this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT
+        ) {
             // it comes from a DELETE INDEX, OVERWRITE TASK or CONCAT TASK
             await TaskService.update(this.currentTask._id, {
-                status: STATUS.INDEX_DELETED
+                status: TASK_STATUS.INDEX_DELETED
             });
             await TaskService.update(this.currentTask._id, {
-                status: STATUS.SAVED
+                status: TASK_STATUS.SAVED
             });
             await DatasetService.update(this.currentTask.datasetId, {
-                status: STATUS.SAVED,
+                status: DATASET_STATUS.SAVED,
             });
         } else {
             // if it caused by an error and The index was deleted due to an error
@@ -108,7 +124,7 @@ class StatusQueueService extends QueueService {
 
     async performedDeleteQuery() {
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.PERFORMED_DELETE_QUERY,
+            status: TASK_STATUS.PERFORMED_DELETE_QUERY,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
         await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE, [{ elasticTaskId: 'elasticTaskId' }]);
@@ -116,35 +132,40 @@ class StatusQueueService extends QueueService {
 
     async finishedDeleteQuery() {
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.FINISHED_DELETE_QUERY
+            status: TASK_STATUS.FINISHED_DELETE_QUERY
         });
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.SAVED
+            status: TASK_STATUS.SAVED
         });
         await DatasetService.update(this.currentTask.datasetId, {
-            status: STATUS.SAVED,
+            status: DATASET_STATUS.SAVED,
         });
     }
 
     async importConfirmed() {
-        // it comes from overwrite
-        if (this.currentTask.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
-        } else if (this.currentTask.type === task.MESSAGE_TYPES.TASK_CONCAT) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'index' }, { targetIndex: 'message.index' }]);
-        } else {
-            await TaskService.update(this.currentTask._id, {
-                status: STATUS.SAVED
-            });
-            await DatasetService.update(this.currentTask.datasetId, {
-                status: STATUS.SAVED,
-            });
+        switch (this.currentTask.type) {
+
+            case task.MESSAGE_TYPES.TASK_OVERWRITE:
+                await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
+                break;
+            case task.MESSAGE_TYPES.TASK_CONCAT:
+                await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }, { targetIndex: 'index' }]);
+                break;
+            default:
+                await TaskService.update(this.currentTask._id, {
+                    status: TASK_STATUS.SAVED
+                });
+                await DatasetService.update(this.currentTask.datasetId, {
+                    status: DATASET_STATUS.SAVED
+                });
+                break;
+
         }
     }
 
     async performedReindex() {
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.PERFORMED_REINDEX,
+            status: TASK_STATUS.PERFORMED_REINDEX,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
         await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }]);
@@ -152,21 +173,23 @@ class StatusQueueService extends QueueService {
 
     async finishedReindex() {
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.FINISHED_REINDEX
+            status: TASK_STATUS.SAVED
         });
+
         await DatasetService.update(this.currentTask.datasetId, {
-            status: STATUS.FINISHED_REINDEX,
+            status: DATASET_STATUS.SAVED,
+            tableName: this.currentTask.index
         });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
     }
 
     async error() {
         await TaskService.update(this.currentTask._id, {
-            status: STATUS.ERROR,
+            status: TASK_STATUS.ERROR,
             error: this.statusMsg.error
         });
         await DatasetService.update(this.currentTask.datasetId, {
-            status: STATUS.ERROR,
+            status: DATASET_STATUS.ERROR,
         });
     }
 
@@ -174,6 +197,9 @@ class StatusQueueService extends QueueService {
 
         switch (this.statusMsg.type) {
 
+            case status.MESSAGE_TYPES.STATUS_INDEX_DEACTIVATED:
+                await this.indexDeactivated();
+                break;
             case status.MESSAGE_TYPES.STATUS_INDEX_CREATED:
                 await this.indexCreated();
                 break;

@@ -43,27 +43,31 @@ describe('STATUS_READ_DATA handling process', () => {
 
         channel = await rabbitmqConnection.createConfirmChannel();
         await channel.assertQueue(config.get('queues.status'));
+        await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
 
         requester = await getTestServer();
-
-        Task.remove({}).exec();
     });
 
     beforeEach(async () => {
         await channel.purgeQueue(config.get('queues.status'));
+        await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
 
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
+        Task.remove({}).exec();
     });
 
     it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
 
         const message = {
             id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
@@ -79,7 +83,7 @@ describe('STATUS_READ_DATA handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code 3 seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);
@@ -88,7 +92,7 @@ describe('STATUS_READ_DATA handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.STATUS.INIT);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
         createdTask.should.have.property('reads').and.equal(1);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
@@ -98,6 +102,10 @@ describe('STATUS_READ_DATA handling process', () => {
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
+
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
     });
 
     afterEach(async () => {
@@ -112,7 +120,9 @@ describe('STATUS_READ_DATA handling process', () => {
         executorQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
-            throw new Error(`Not all nock interceptors were used: ${nock.pendingMocks()}`);
+            const pendingMocks = nock.pendingMocks();
+            nock.cleanAll();
+            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
     });
 

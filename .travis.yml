@@ -16,6 +16,7 @@ env:
     - CT_URL=http://127.0.0.1:9000
     - CT_REGISTER_MODE=auto
     - API_VERSION=v1
+    - ELASTIC_URL=127.0.0.1:9000
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
   - chmod +x ./cc-test-reporter

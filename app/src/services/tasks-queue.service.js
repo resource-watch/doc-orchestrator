@@ -28,6 +28,9 @@ class TasksQueueService extends QueueService {
             case task.MESSAGE_TYPES.TASK_CONCAT:
                 executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CONCAT, this.taskMsg);
                 break;
+            case task.MESSAGE_TYPES.TASK_APPEND:
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_APPEND, this.taskMsg);
+                break;
             case task.MESSAGE_TYPES.TASK_DELETE:
                 executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, this.taskMsg);
                 break;
@@ -67,7 +70,7 @@ class TasksQueueService extends QueueService {
             // Error creating entity or sending to queue
             logger.error(err);
             // Accept the message
-            this.channel.ack(msg);
+            await this.channel.ack(msg);
             // Delete mongo task entity
             await TaskService.delete(this.task._id);
             // Update DatasetService

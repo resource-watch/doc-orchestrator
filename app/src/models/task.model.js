@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const uuidV4 = require('uuid/v4');
 const { task } = require('rw-doc-importer-messages');
-const { STATUS } = require('app.constants');
+const { TASK_STATUS } = require('app.constants');
 
 const { Schema } = mongoose;
 const { MESSAGE_TYPES } = task;
@@ -10,7 +10,7 @@ const Task = new Schema({
     _id: { type: String, default: uuidV4 },
     type: { type: String, enum: Object.keys(MESSAGE_TYPES), default: MESSAGE_TYPES.EXECUTION_CREATE },
     message: { type: Schema.Types.Mixed },
-    status: { type: String, enum: Object.keys(STATUS), default: STATUS.INIT },
+    status: { type: String, enum: Object.keys(TASK_STATUS), default: TASK_STATUS.INIT },
     reads: { type: Number, min: 0, default: 0 },
     writes: { type: Number, min: 0, default: 0 },
     createdAt: { type: Date, default: Date.now },
