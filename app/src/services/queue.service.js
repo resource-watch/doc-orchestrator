@@ -27,9 +27,11 @@ class QueueService {
         let conn = null;
         while (connectAttempts >= 0 && conn === null) {
             try {
+                // eslint-disable-next-line no-await-in-loop
                 conn = await amqp.connect(config.get('rabbitmq.url'));
             } catch (err) {
                 logger.debug(`Failure connection to RabbitMQ on ${config.get('rabbitmq.url')}, ${connectAttempts} reconnect attempts remaining`);
+                // eslint-disable-next-line no-plusplus
                 connectAttempts--;
                 await sleep.sleep(5);
             }
@@ -63,7 +65,6 @@ class QueueService {
     }
 
     consume() {
-
     }
 
 }
