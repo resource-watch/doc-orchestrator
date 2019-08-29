@@ -105,7 +105,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
             const content = JSON.parse(msg.content.toString());
             content.should.have.property('datasetId').and.equal(timestamp);
             content.should.have.property('id');
-            content.should.have.property('fileUrl');
+            content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
             content.should.have.property('provider').and.equal('csv');
             content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_CREATE);
             content.should.have.property('taskId').and.equal(message.id);

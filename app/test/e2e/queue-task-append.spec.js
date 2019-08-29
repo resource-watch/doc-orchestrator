@@ -72,7 +72,7 @@ describe('TASK_APPEND handling process', () => {
             id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
             type: 'TASK_APPEND',
             datasetId: timestamp,
-            fileUrl: 'http://api.resourcewatch.org/dataset',
+            fileUrl: ['http://api.resourcewatch.org/dataset'],
             provider: 'json',
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
             append: false
@@ -103,7 +103,7 @@ describe('TASK_APPEND handling process', () => {
             const content = JSON.parse(msg.content.toString());
             content.should.have.property('datasetId').and.equal(timestamp);
             content.should.have.property('id');
-            content.should.have.property('fileUrl');
+            content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
             content.should.have.property('provider').and.equal('json');
             content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_APPEND);
             content.should.have.property('taskId').and.equal(message.id);
@@ -141,7 +141,7 @@ describe('TASK_APPEND handling process', () => {
             id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
             type: 'TASK_APPEND',
             datasetId: timestamp,
-            fileUrl: 'http://api.resourcewatch.org/dataset',
+            fileUrl: ['http://api.resourcewatch.org/dataset'],
             provider: 'json',
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
             append: true
@@ -172,7 +172,7 @@ describe('TASK_APPEND handling process', () => {
             const content = JSON.parse(msg.content.toString());
             content.should.have.property('datasetId').and.equal(timestamp);
             content.should.have.property('id');
-            content.should.have.property('fileUrl');
+            content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
             content.should.have.property('provider').and.equal('json');
             content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_APPEND);
             content.should.have.property('taskId').and.equal(message.id);
@@ -210,7 +210,7 @@ describe('TASK_APPEND handling process', () => {
             id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
             type: 'TASK_APPEND',
             datasetId: timestamp,
-            fileUrl: 'http://api.resourcewatch.org/dataset',
+            fileUrl: ['http://api.resourcewatch.org/dataset'],
             provider: 'json',
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
             append: false
@@ -264,7 +264,7 @@ describe('TASK_APPEND handling process', () => {
             id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
             type: 'TASK_APPEND',
             datasetId: timestamp,
-            fileUrl: 'http://api.resourcewatch.org/dataset',
+            fileUrl: ['http://api.resourcewatch.org/dataset'],
             provider: 'json',
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
             append: false
