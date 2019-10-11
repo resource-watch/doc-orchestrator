@@ -41,7 +41,8 @@ const createTask = (status, type, createdAt = new Date(), reads = 0) => {
             type,
             datasetId: uuid,
             provider: 'csv',
-            index: uuidV4()
+            index: uuidV4(),
+            fileUrl: ['https://example.com/file1.json', 'https://example.com/file2.json']
         },
         index: uuidV4(),
         datasetId: uuid

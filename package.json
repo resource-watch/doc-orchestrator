@@ -42,10 +42,11 @@
     "koa-logger": "3.2.0",
     "koa-mount": "3.0.0",
     "koa-router": "7.4.0",
+    "lodash": "^4.17.15",
     "mongoose": "5.2.14",
     "request": "2.88.0",
     "request-promise": "4.2.2",
-    "rw-doc-importer-messages": "1.2.1",
+    "rw-doc-importer-messages": "1.3.0",
     "sleep": "^5.2.3",
     "uuid": "3.3.2"
   },

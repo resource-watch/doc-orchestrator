@@ -27,6 +27,22 @@ class DatasetService {
             throw new Error(e);
         }
     }
+
+    static async get(id) {
+        logger.debug(`Getting dataset with id: ${id}`);
+
+        try {
+            return await ctRegisterMicroservice.requestToMicroservice({
+                uri: `/dataset/${id}`,
+                method: 'GET',
+                json: true
+            });
+        } catch (e) {
+            logger.error('Error issuing request to the dataset microservice: ', e.message);
+            throw new Error(e);
+        }
+    }
+
 }
 
 module.exports = DatasetService;
