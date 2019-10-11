@@ -6,6 +6,7 @@ const { execution, status, task } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const config = require('config');
 const { TASK_STATUS, DATASET_STATUS } = require('app.constants');
+const { get, concat, compact, uniq } = require('lodash');
 
 class StatusQueueService extends QueueService {
 
@@ -22,13 +23,7 @@ class StatusQueueService extends QueueService {
         this.currentTask = await TaskService.get(this.statusMsg.taskId);
         props.forEach((prop) => {
             const field = Object.keys(prop)[0];
-            const dbField = prop[field];
-            // message prop cases
-            if (dbField.indexOf('.') >= 0) {
-                contentMsg[field] = this.currentTask[dbField.split('.')[0]][dbField.split('.')[1]];
-            } else {
-                contentMsg[field] = this.currentTask[dbField];
-            }
+            contentMsg[field] = get(this.currentTask, prop[field]);
         });
         const message = execution.createMessage(type, contentMsg);
         await ExecutorTaskQueueService.sendMessage(message);
@@ -78,6 +73,7 @@ class StatusQueueService extends QueueService {
 
     async readFile() {
         // The file has been read completely, just update the status
+        // TODO: this needs to be adapted for scenarios with multiple files
         await TaskService.update(this.currentTask._id, {
             status: TASK_STATUS.READ
         });
@@ -168,17 +164,22 @@ class StatusQueueService extends QueueService {
             status: TASK_STATUS.PERFORMED_REINDEX,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }]);
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }, { fileCount: 'message.fileUrl.length' }]);
     }
 
     async finishedReindex() {
+        const dataset = await DatasetService.get(this.currentTask.datasetId);
+        const { connectorUrl, sources } = dataset.data.attributes;
+
         await TaskService.update(this.currentTask._id, {
             status: TASK_STATUS.SAVED
         });
 
         await DatasetService.update(this.currentTask.datasetId, {
             status: DATASET_STATUS.SAVED,
-            tableName: this.currentTask.index
+            tableName: this.currentTask.index,
+            connectorUrl: null,
+            sources: uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)))
         });
         await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
     }
@@ -189,7 +190,7 @@ class StatusQueueService extends QueueService {
             error: this.statusMsg.error
         });
         await DatasetService.update(this.currentTask.datasetId, {
-            status: DATASET_STATUS.ERROR,
+            status: DATASET_STATUS.ERROR
         });
     }
 
