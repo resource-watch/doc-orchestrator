@@ -1,8 +1,0 @@
-base:
-  build: .
-  container_name: doc-orchestrator
-  ports:
-    - "5000:5000"
-  environment:
-    NODE_PATH: app/src
-    PORT: 5000
