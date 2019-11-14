@@ -7,6 +7,7 @@ const sleep = require('sleep');
 const ErrorSerializer = require('serializers/error.serializer');
 const ctRegisterMicroservice = require('ct-register-microservice-node');
 const mongoose = require('mongoose');
+const koaSimpleHealthCheck = require('koa-simple-healthcheck');
 
 // const nock = require('nock');
 // nock.recorder.rec();
@@ -74,6 +75,8 @@ async function init() {
             });
 
             app.use(koaLogger());
+            app.use(koaSimpleHealthCheck());
+
             loader.loadRoutes(app);
 
             const server = app.listen(process.env.PORT, () => {
