@@ -198,10 +198,8 @@ class TaskService {
         return task;
     }
 
-    static async checkCounter(id) {
-        logger.debug(`[TaskService]: checking counter of task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
-        const task = await TaskService.get(id);
+    static async checkCounter(task) {
+        logger.debug(`[TaskService]: checking counter of task with id:  ${task.id}`);
         if ((task.writes - task.reads === 0) && (task.status === TASK_STATUS.READ)) {
             return true;
         }

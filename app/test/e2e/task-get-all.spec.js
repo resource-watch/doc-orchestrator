@@ -25,7 +25,7 @@ describe('Task get all tests', () => {
 
         requester = await getTestServer();
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     it('Get all task with empty database should return 200 with empty array', async () => {
@@ -444,7 +444,7 @@ describe('Task get all tests', () => {
         }
     });
 
-    after(() => {
-        Task.remove({}).exec();
+    after(async () => {
+        await Task.remove({}).exec();
     });
 });

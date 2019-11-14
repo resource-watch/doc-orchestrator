@@ -48,7 +48,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
 
         requester = await getTestServer();
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     beforeEach(async () => {
@@ -65,7 +65,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     it('Consume a STATUS_INDEX_CREATED message and update dataset tableName and task (happy case)', async () => {
@@ -74,7 +74,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
 
         const message = {
-            id: 'db96457a-f083-4bda-a428-73ae974f5f22',
+            id: 'b296457a-f083-4bda-a428-73ae974f5f22',
             type: 'STATUS_INDEX_CREATED',
             taskId: fakeTask1.id,
             index: 'index_1552479168458_1552479168503'
@@ -98,22 +98,33 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         // Give the code some time to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
-        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        postQueueStatus.messageCount.should.equal(0);
+        let expectedExecutorQueueMessageCount = 1;
 
-        const validateMessage = async (msg) => {
+        const validateExecutorQueueMessages = resolve => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            content.should.have.property('datasetId').and.equal(timestamp);
-            content.should.have.property('id');
-            content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
-            content.should.have.property('provider').and.equal('csv');
-            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_CREATE);
-            content.should.have.property('taskId').and.equal(message.id);
-
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                    content.should.have.property('id');
+                    content.should.have.property('taskId').and.equal(message.taskId);
+                    content.should.have.property('index').and.equal(fakeTask1.index);
+                } else {
+                    throw new Error(`Unexpected message type: ${content.type}`);
+                }
+            } catch (err) {
+                throw err;
+            }
             await channel.ack(msg);
-        };
 
-        await channel.consume(config.get('queues.status'), validateMessage);
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
+        };
 
         const createdTasks = await Task.find({}).exec();
 
@@ -130,26 +141,23 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
 
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve), { exclusive: true });
         });
     });
 
     afterEach(async () => {
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
-        await channel.purgeQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
-        await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
         const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         tasksQueueStatus.messageCount.should.equal(0);
 
@@ -161,7 +169,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
     });
 
     after(async () => {
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
 
         rabbitmqConnection.close();
     });

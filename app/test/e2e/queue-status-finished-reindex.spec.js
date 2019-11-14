@@ -63,7 +63,7 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     it('Consume a STATUS_FINISHED_REINDEX message for a TASK_CONCAT should create a EXECUTION_CONFIRM_REINDEX message (happy case)', async () => {
@@ -207,42 +207,69 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
         // Give the code some time to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
-        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        postQueueStatus.messageCount.should.equal(0);
+        let expectedExecutorQueueMessageCount = 1;
 
-        const createdTasks = await Task.find({}).exec();
+        const validateExecutorQueueMessages = resolve => async (msg) => {
+            const content = JSON.parse(msg.content.toString());
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                    content.should.have.property('id');
+                    content.should.have.property('taskId').and.equal(message.taskId);
+                    content.should.have.property('index').and.equal(fakeTask1.message.index);
+                } else {
+                    throw new Error(`Unexpected message type: ${content.type}`);
+                }
+            } catch (err) {
+                throw err;
+            }
+            await channel.ack(msg);
 
-        createdTasks.should.be.an('array').and.have.lengthOf(1);
-        const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
-        createdTask.should.have.property('reads').and.equal(0);
-        createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
-        createdTask.should.have.property('message').and.be.an('object');
-        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
-        createdTask.should.have.property('createdAt').and.be.a('date');
-        createdTask.should.have.property('updatedAt').and.be.a('date');
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+            const createdTasks = await Task.find({}).exec();
 
-        const log = createdTask.logs[0];
+            createdTasks.should.be.an('array').and.have.lengthOf(1);
+            const createdTask = createdTasks[0];
+            createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
+            createdTask.should.have.property('reads').and.equal(0);
+            createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('_id').and.equal(fakeTask1.id);
+            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
+            createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+            createdTask.should.have.property('message').and.be.an('object');
+            createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
+            createdTask.should.have.property('createdAt').and.be.a('date');
+            createdTask.should.have.property('updatedAt').and.be.a('date');
+            createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        log.should.have.property('id').and.equal(message.id);
-        log.should.have.property('taskId').and.equal(message.taskId);
-        log.should.have.property('type').and.equal(message.type);
+            const log = createdTask.logs[0];
+
+            log.should.have.property('id').and.equal(message.id);
+            log.should.have.property('taskId').and.equal(message.taskId);
+            log.should.have.property('type').and.equal(message.type);
+
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
+        };
+
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve), { exclusive: true });
+        });
     });
 
     afterEach(async () => {
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
-        await channel.purgeQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
-        await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 

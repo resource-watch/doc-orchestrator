@@ -22,7 +22,7 @@ describe('Task delete tests', () => {
 
         requester = await getTestServer();
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     it('Delete a task without a user should return 403', async () => {
@@ -79,7 +79,7 @@ describe('Task delete tests', () => {
         }
     });
 
-    after(() => {
-        Task.remove({}).exec();
+    after(async () => {
+        await Task.remove({}).exec();
     });
 });

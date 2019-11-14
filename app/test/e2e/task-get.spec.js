@@ -21,7 +21,7 @@ describe('Task get tests', () => {
 
         requester = await getTestServer();
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     it('Get a non-existent task should return 404', async () => {
@@ -248,7 +248,7 @@ describe('Task get tests', () => {
         }
     });
 
-    after(() => {
-        Task.remove({}).exec();
+    after(async () => {
+        await Task.remove({}).exec();
     });
 });

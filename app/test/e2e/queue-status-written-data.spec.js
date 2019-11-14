@@ -86,7 +86,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 3 seconds to do its thing
+        // Give the code a few seconds to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -119,7 +119,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     it('Consume a STATUS_WRITTEN_DATA message should update task read count (happy case, last write)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 1)).save();
 
         const message = {
             id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
@@ -136,63 +136,68 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
 
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 3 seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        let expectedExecutorQueueMessageCount = 1;
 
-
-        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        postQueueStatus.messageCount.should.equal(0);
-
-        const postExecutorTasksStatus = await channel.assertQueue(config.get('queues.executorTasks'));
-        postExecutorTasksStatus.messageCount.should.equal(0);
-
-        const createdTasks = await Task.find({}).exec();
-
-        createdTasks.should.be.an('array').and.have.lengthOf(1);
-        const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
-        createdTask.should.have.property('reads').and.equal(2);
-        createdTask.should.have.property('writes').and.equal(1);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
-        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
-        createdTask.should.have.property('message').and.be.an('object');
-        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
-        createdTask.should.have.property('createdAt').and.be.a('date');
-        createdTask.should.have.property('updatedAt').and.be.a('date');
-
-        const validateExecutorTasksQueueMessages = async (msg) => {
+        const validateExecutorQueueMessages = resolve => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            content.should.have.property('id');
-            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT);
-            content.should.have.property('index').and.equal(fakeTask1.index);
-            content.should.have.property('taskId').and.equal(message.taskId);
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT) {
+                    content.should.have.property('id');
+                    content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT);
+                    content.should.have.property('index').and.equal(fakeTask1.index);
+                    content.should.have.property('taskId').and.equal(message.taskId);
+                } else {
+                    throw new Error(`Unexpected message type: ${content.type}`);
+                }
+            } catch (err) {
+                throw err;
+            }
 
             await channel.ack(msg);
+
+            const createdTasks = await Task.find({}).exec();
+
+            createdTasks.should.be.an('array').and.have.lengthOf(1);
+            const createdTask = createdTasks[0];
+            createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
+            createdTask.should.have.property('reads').and.equal(1);
+            createdTask.should.have.property('writes').and.equal(1);
+            createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+            createdTask.should.have.property('_id').and.equal(fakeTask1.id);
+            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
+            createdTask.should.have.property('message').and.be.an('object');
+            createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
+            createdTask.should.have.property('createdAt').and.be.a('date');
+            createdTask.should.have.property('updatedAt').and.be.a('date');
+
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
         };
 
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve), { exclusive: true });
         });
-
-        await channel.consume(config.get('queues.executorTasks'), validateExecutorTasksQueueMessages);
     });
 
     afterEach(async () => {
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
-        await channel.purgeQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
-        await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
         const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         tasksQueueStatus.messageCount.should.equal(0);
 

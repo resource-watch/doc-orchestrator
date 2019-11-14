@@ -63,7 +63,7 @@ describe('STATUS_READ_DATA handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
     });
 
     it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {
@@ -82,7 +82,7 @@ describe('STATUS_READ_DATA handling process', () => {
 
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 3 seconds to do its thing
+        // Give the code a few seconds to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -110,12 +110,10 @@ describe('STATUS_READ_DATA handling process', () => {
 
     afterEach(async () => {
         await channel.assertQueue(config.get('queues.status'));
-        await channel.purgeQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
-        await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
@@ -127,7 +125,7 @@ describe('STATUS_READ_DATA handling process', () => {
     });
 
     after(async () => {
-        Task.remove({}).exec();
+        await Task.remove({}).exec();
 
         rabbitmqConnection.close();
     });
