@@ -1,4 +1,5 @@
 # 14/11/2019
+- Refactor tests for reliability
 - Set CPU and memory quotas on k8s config
 - Add liveliness and readiness checks to k8s config
 - Format code to match ESLint rules
