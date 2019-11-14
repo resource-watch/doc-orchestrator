@@ -6,7 +6,9 @@ const { execution, status, task } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const config = require('config');
 const { TASK_STATUS, DATASET_STATUS } = require('app.constants');
-const { get, concat, compact, uniq } = require('lodash');
+const {
+    get, concat, compact, uniq
+} = require('lodash');
 
 class StatusQueueService extends QueueService {
 

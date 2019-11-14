@@ -19,7 +19,7 @@ const DATASET_STATUS = {
     PENDING: 'PENDING',
     SAVED: 'SAVED',
     ERROR: 'ERROR'
-}
+};
 
 module.exports = {
     DATASET_STATUS,

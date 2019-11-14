@@ -31,12 +31,10 @@ class TaskSerializer {
         if (data) {
             if (data.docs) {
                 result.data = data.docs.map(el => TaskSerializer.serializeElement(el));
+            } else if (Array.isArray(data)) {
+                result.data = data.map(e => TaskSerializer.serializeElement(e));
             } else {
-                if (Array.isArray(data)) {
-                    result.data = data.map(e => TaskSerializer.serializeElement(e));
-                } else {
-                    result.data = TaskSerializer.serializeElement(data);
-                }
+                result.data = TaskSerializer.serializeElement(data);
             }
         }
         return result;

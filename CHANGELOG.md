@@ -1,4 +1,5 @@
 # 14/11/2019
+- Format code to match ESLint rules
 - Add hooks to validate ESLint rules
 - Update ESLint config
 - Update node version to 12.x

@@ -132,7 +132,7 @@ describe('TASK_APPEND handling process', () => {
         process.on('unhandledRejection', (error) => {
             should.fail(error);
         });
-    })
+    });
 
     it('Consume a TASK_APPEND message with append=true and create a new task and a EXECUTION_APPEND message (happy case)', async () => {
         const timestamp = new Date().getTime();

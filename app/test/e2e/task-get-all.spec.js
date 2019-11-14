@@ -347,7 +347,7 @@ describe('Task get all tests', () => {
     });
 
 
-    it('Get a list of existent tasks should return 200 with the existing tasks', async () => {
+    it('Get a list of existent tasks should return 200 with the existing tasks, and include details loaded from elasticsearch', async () => {
         const elasticTaskResponseObject = {
             completed: true,
             task: {
