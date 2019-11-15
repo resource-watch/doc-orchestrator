@@ -9,7 +9,7 @@ spec:
     kind: Deployment
     name: {name}
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 15
   metrics:
     - type: External
       external:
@@ -17,4 +17,4 @@ spec:
         metricSelector:
           matchLabels:
             metric.labels.queue: DOC-STATUS
-        targetValue: 20
+        targetAverageValue: 10
