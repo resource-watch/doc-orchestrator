@@ -1,3 +1,6 @@
+# 27/11/2019
+- Modify dataset append so that it adds the newly appended file URLs to the dataset's `sources` list.
+
 # 14/11/2019
 - Refactor tests for reliability
 - Set CPU and memory quotas on k8s config
