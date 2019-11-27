@@ -240,8 +240,9 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
             lastCheckedDate: '2019-03-29T08:43:08.091Z'
         };
 
+
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1 })
+            .get(`/v1/dataset/${fakeTask1.datasetId}`)
             .reply(200, {
                 data: {
                     id: '6a994bd1-6f88-48dc-a08e-d8c1c90272c4',
@@ -257,7 +258,82 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
                         connectorType: 'document',
                         provider: 'json',
                         userId: '1a10d7c6e0a37126611fd7a7',
-                        connectorUrl: 'http://api.resourcewatch.org/dataset',
+                        sources: [
+                            'https://example.com/file3.json',
+                            'https://example.com/file4.json'
+                        ],
+                        tableName: fakeTask1.index,
+                        status: 'saved',
+                        published: true,
+                        overwrite: false,
+                        verified: false,
+                        blockchain: {},
+                        mainDateField: null,
+                        env: 'production',
+                        geoInfo: false,
+                        protected: false,
+                        legend: {
+                            nested: [],
+                            country: [],
+                            region: [],
+                            date: [],
+                            integer: [],
+                            short: [],
+                            byte: [],
+                            double: [],
+                            float: [],
+                            half_float: [],
+                            scaled_float: [],
+                            boolean: [],
+                            binary: [],
+                            string: [],
+                            text: [],
+                            keyword: []
+                        },
+                        clonedHost: {},
+                        errorMessage: '',
+                        taskId: '/v1/doc-importer/task/4e451d0e-a464-448f-9dc3-68cc493f0193',
+                        updatedAt: '2019-03-30T06:15:26.762Z',
+                        dataLastUpdated: null,
+                        widgetRelevantProps: [],
+                        layerRelevantProps: []
+                    }
+                }
+            });
+
+        nock(process.env.CT_URL)
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, {
+                status: 1,
+                connectorUrl: null,
+                sources: [
+                    'https://example.com/file3.json',
+                    'https://example.com/file4.json',
+                    'https://example.com/file1.json',
+                    'https://example.com/file2.json'
+                ]
+            })
+            .reply(200, {
+                data: {
+                    id: '6a994bd1-6f88-48dc-a08e-d8c1c90272c4',
+                    type: 'dataset',
+                    attributes: {
+                        name: 'Resource Watch datasets list',
+                        slug: 'Resource-Watch-datasets-list_25',
+                        type: null,
+                        subtitle: null,
+                        application: ['rw'],
+                        dataPath: 'data',
+                        attributesPath: null,
+                        connectorType: 'document',
+                        provider: 'json',
+                        userId: '1a10d7c6e0a37126611fd7a7',
+                        connectorUrl: null,
+                        sources: [
+                            'https://example.com/file3.json',
+                            'https://example.com/file4.json',
+                            'https://example.com/file1.json',
+                            'https://example.com/file2.json'
+                        ],
                         tableName: fakeTask1.index,
                         status: 'saved',
                         published: true,

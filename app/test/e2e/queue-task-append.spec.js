@@ -158,7 +158,10 @@ describe('TASK_APPEND handling process', () => {
         };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0
+            })
             .once()
             .reply(200);
 

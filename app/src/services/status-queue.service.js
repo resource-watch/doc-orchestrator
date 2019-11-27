@@ -149,6 +149,20 @@ class StatusQueueService extends QueueService {
             case task.MESSAGE_TYPES.TASK_CONCAT:
                 await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }, { targetIndex: 'index' }]);
                 break;
+            case task.MESSAGE_TYPES.TASK_APPEND: {
+                const dataset = await DatasetService.get(this.currentTask.datasetId);
+                const { connectorUrl, sources } = dataset.data.attributes;
+
+                await TaskService.update(this.currentTask._id, {
+                    status: TASK_STATUS.SAVED
+                });
+                await DatasetService.update(this.currentTask.datasetId, {
+                    status: DATASET_STATUS.SAVED,
+                    connectorUrl: null,
+                    sources: uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)))
+                });
+                break;
+            }
             default:
                 await TaskService.update(this.currentTask._id, {
                     status: TASK_STATUS.SAVED
