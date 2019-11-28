@@ -1,7 +1,6 @@
 const logger = require('logger');
 const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
-const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { TASK_STATUS } = require('app.constants');
 const elasticService = require('services/elastic.service');
 
@@ -206,14 +205,10 @@ class TaskService {
         return false;
     }
 
-    static async checkRunningTasks(datasetId) {
+    static async getRunningTasks(datasetId) {
         logger.debug(`[TaskService]: checking running task for datasetId:  ${datasetId}`);
         logger.debug(`[DBACCESS-FIND]: task.datasetId: ${datasetId}`);
-        const tasks = await Task.find({ datasetId }).exec();
-        const runningTask = tasks.find(task => ((task.status !== TASK_STATUS.SAVED) && (task.status !== TASK_STATUS.ERROR)));
-        if (runningTask) {
-            throw new TaskAlreadyRunningError(`Task with datasetId '${datasetId}' already running`);
-        }
+        return Task.find({ datasetId, status: { $nin: [TASK_STATUS.SAVED, TASK_STATUS.ERROR] } }).exec();
     }
 
 }

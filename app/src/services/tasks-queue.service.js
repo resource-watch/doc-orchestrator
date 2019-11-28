@@ -2,10 +2,10 @@ const logger = require('logger');
 const QueueService = require('services/queue.service');
 const TaskService = require('services/task.service');
 const DatasetService = require('services/dataset.service');
-const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { task, execution } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const config = require('config');
+const { DATASET_STATUS } = require('app.constants');
 
 class TasksQueueService extends QueueService {
 
@@ -52,9 +52,23 @@ class TasksQueueService extends QueueService {
     async consume(msg) {
         logger.info(`Message received in ${config.get('queues.tasks')}`);
         this.taskMsg = JSON.parse(msg.content.toString());
+
+        // check if any task is currently running for this dataset
+        const runningTasks = await TaskService.getRunningTasks(this.taskMsg.datasetId);
+        if (runningTasks.length > 0) {
+            const runningTaskIds = runningTasks.map(task => task.id).join(', ');
+
+            await DatasetService.update(this.taskMsg.datasetId, {
+                status: DATASET_STATUS.SAVED,
+                errorMessage: `Task(s) ${runningTaskIds} already running, operation cancelled.`
+            });
+
+            await this.channel.ack(msg);
+
+            return;
+        }
+
         try {
-            // check if any task is currently running for this dataset
-            await TaskService.checkRunningTasks(this.taskMsg.datasetId);
             // Create mongo task entity
             this.task = await TaskService.create(this.taskMsg);
             // Update dataset
@@ -74,18 +88,12 @@ class TasksQueueService extends QueueService {
             // Delete mongo task entity
             await TaskService.delete(this.task._id);
             // Update DatasetService
-            await DatasetService.update(this.task.datasetId, {
+            await DatasetService.update(this.taskMsg.datasetId, {
                 taskId: ''
             });
-            // check if rejected because it's already running a task with the same datasetId
-            // in these cases we do not count
-            if (err instanceof TaskAlreadyRunningError) {
+            const retries = msg.properties.headers['x-redelivered-count'] || 0;
+            if (retries < 10) {
                 this.returnMsg(msg);
-            } else {
-                const retries = msg.properties.headers['x-redelivered-count'] || 0;
-                if (retries < 10) {
-                    this.returnMsg(msg);
-                }
             }
         }
     }
