@@ -45,7 +45,7 @@ describe('TASK_OVERWRITE handling process', () => {
 
         requester = await getTestServer();
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     beforeEach(async () => {
@@ -137,7 +137,7 @@ describe('TASK_OVERWRITE handling process', () => {
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
@@ -160,7 +160,7 @@ describe('TASK_OVERWRITE handling process', () => {
     });
 
     after(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         rabbitmqConnection.close();
     });

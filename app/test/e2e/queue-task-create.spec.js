@@ -62,7 +62,7 @@ describe('TASK_CREATE handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a TASK_CREATE message and create a new task and EXECUTION_CREATE message (happy case)', async () => {
@@ -222,7 +222,7 @@ describe('TASK_CREATE handling process', () => {
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));

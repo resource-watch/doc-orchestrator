@@ -48,7 +48,7 @@ describe('STATUS_PERFORMED_REINDEX handling process', () => {
 
         requester = await getTestServer();
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     beforeEach(async () => {
@@ -65,7 +65,7 @@ describe('STATUS_PERFORMED_REINDEX handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a STATUS_PERFORMED_REINDEX message for a TASK_CONCAT should create a EXECUTION_CONFIRM_REINDEX message (happy case)', async () => {
@@ -142,7 +142,7 @@ describe('STATUS_PERFORMED_REINDEX handling process', () => {
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));

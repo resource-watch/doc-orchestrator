@@ -63,7 +63,7 @@ describe('STATUS_READ_DATA handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {
@@ -125,7 +125,7 @@ describe('STATUS_READ_DATA handling process', () => {
     });
 
     after(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         rabbitmqConnection.close();
     });

@@ -62,7 +62,7 @@ describe('TASK_CONCAT handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a TASK_CONCAT message and create a new task and a EXECUTION_CONCAT message (happy case)', async () => {
@@ -78,7 +78,11 @@ describe('TASK_CONCAT handling process', () => {
         };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0,
+                errorMessage: ''
+            })
             .once()
             .reply(200);
 
@@ -158,7 +162,8 @@ describe('TASK_CONCAT handling process', () => {
         nock(`${process.env.CT_URL}`)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
-                status: 0
+                status: 0,
+                errorMessage: ''
             })
             .times(11)
             .reply(500, { error: 'dataset microservice unavailable' });
@@ -211,7 +216,8 @@ describe('TASK_CONCAT handling process', () => {
         nock(`${process.env.CT_URL}`)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
-                status: 0
+                status: 0,
+                errorMessage: ''
             })
             .times(11)
             .reply(404, { error: 'dataset not found' });
@@ -250,7 +256,7 @@ describe('TASK_CONCAT handling process', () => {
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));

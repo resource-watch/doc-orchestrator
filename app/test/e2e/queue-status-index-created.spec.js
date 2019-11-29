@@ -48,7 +48,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
 
         requester = await getTestServer();
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     beforeEach(async () => {
@@ -65,7 +65,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a STATUS_INDEX_CREATED message and update dataset tableName and task (happy case)', async () => {
@@ -147,7 +147,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
@@ -169,7 +169,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
     });
 
     after(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         rabbitmqConnection.close();
     });

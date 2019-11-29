@@ -73,7 +73,8 @@ class TasksQueueService extends QueueService {
             this.task = await TaskService.create(this.taskMsg);
             // Update dataset
             await DatasetService.update(this.task.datasetId, {
-                taskId: `/v1/doc-importer/task/${this.task._id}`
+                taskId: `/v1/doc-importer/task/${this.task._id}`,
+                errorMessage: ''
             });
             // Process message
             await this.processMessage();

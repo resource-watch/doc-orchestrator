@@ -63,7 +63,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a STATUS_IMPORT_CONFIRMED message for a TASK_CREATE task should set task and dataset statuses to saved (happy case)', async () => {
@@ -403,7 +403,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));

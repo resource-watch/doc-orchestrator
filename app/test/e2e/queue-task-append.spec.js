@@ -40,6 +40,8 @@ describe('TASK_APPEND handling process', () => {
         }
 
         requester = await getTestServer();
+
+        process.on('unhandledRejection', should.fail);
     });
 
     beforeEach(async () => {
@@ -62,7 +64,7 @@ describe('TASK_APPEND handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a TASK_APPEND message and create a new task and a EXECUTION_APPEND message (happy case)', async () => {
@@ -160,6 +162,7 @@ describe('TASK_APPEND handling process', () => {
         nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
+                errorMessage: '',
                 status: 0
             })
             .once()
@@ -242,7 +245,8 @@ describe('TASK_APPEND handling process', () => {
         nock(`${process.env.CT_URL}`)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
-                status: 0
+                status: 0,
+                errorMessage: ''
             })
             .times(11)
             .reply(500, { error: 'dataset microservice unavailable' });
@@ -274,10 +278,6 @@ describe('TASK_APPEND handling process', () => {
         const createdTasks = await Task.find({}).exec();
 
         createdTasks.should.be.an('array').and.have.lengthOf(0);
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
     });
 
     it('Consume a TASK_APPEND message while not being able to reach the dataset microservice (404) should retry 10 times and ot create a task nor issue additional messages', async () => {
@@ -296,7 +296,8 @@ describe('TASK_APPEND handling process', () => {
         nock(`${process.env.CT_URL}`)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
-                status: 0
+                status: 0,
+                errorMessage: ''
             })
             .times(11)
             .reply(404, { error: 'dataset not found' });
@@ -328,14 +329,10 @@ describe('TASK_APPEND handling process', () => {
         const createdTasks = await Task.find({}).exec();
 
         createdTasks.should.be.an('array').and.have.lengthOf(0);
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
     });
 
     afterEach(async () => {
-        await Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
@@ -361,6 +358,7 @@ describe('TASK_APPEND handling process', () => {
     });
 
     after(async () => {
+        process.removeListener('unhandledRejection', should.fail);
         rabbitmqConnection.close();
     });
 });
