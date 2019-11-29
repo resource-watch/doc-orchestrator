@@ -57,7 +57,7 @@ async function init() {
                     try {
                         error = JSON.parse(inErr);
                     } catch (e) {
-                        logger.error('Parsing error');
+                        logger.debug('Could not JSON parse exception - is it JSON?');
                         error = inErr;
                     }
                     ctx.status = error.status || ctx.status || 500;

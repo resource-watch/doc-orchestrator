@@ -153,10 +153,19 @@ class TaskService {
     static async getAll(query = {}) {
         logger.debug(`[TaskService]: Getting all tasks`);
         logger.debug(`[DBACCESS-FIND]: tasks`);
-        const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
-        const tasks = await Task.find(filteredQuery);
 
-        await Promise.all(tasks.map(async (task) => {
+        const page = query['page[number]'] ? parseInt(query['page[number]'], 10) : 1;
+        const limit = query['page[size]'] ? parseInt(query['page[size]'], 10) : 10;
+
+        const paginationOptions = {
+            page,
+            limit
+        };
+
+        const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
+        const pages = await Task.paginate(filteredQuery, paginationOptions);
+
+        await Promise.all(pages.docs.map(async (task) => {
             await Promise.all(task.logs.map(async (log, logIndex) => {
                 if (!log.elasticTaskId) {
                     return Promise.resolve();
@@ -174,7 +183,7 @@ class TaskService {
             }));
         }));
 
-        return tasks;
+        return pages;
     }
 
     static async addWrite(id) {

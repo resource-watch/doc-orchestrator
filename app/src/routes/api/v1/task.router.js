@@ -8,7 +8,13 @@ const router = new Router({
     prefix: '/doc-importer/task',
 });
 
+const serializeObjToQuery = obj => Object.keys(obj).reduce((a, k) => {
+    a.push(`${k}=${encodeURIComponent(obj[k])}`);
+    return a;
+}, []).join('&');
+
 class TaskRouter {
+
 
     static getUser(ctx) {
         let user = Object.assign({}, ctx.request.query.loggedUser ? JSON.parse(ctx.request.query.loggedUser) : {}, ctx.request.body.loggedUser);
@@ -37,9 +43,24 @@ class TaskRouter {
     static async getAll(ctx) {
         logger.info(`[TaskRouter] Getting all tasks`);
         const { query } = ctx;
+
+        if (parseInt(query['page[size]'], 10) > 100) {
+            ctx.throw(400, 'Invalid page size');
+        }
+
         try {
             const tasks = await TaskService.getAll(query);
-            ctx.body = TaskSerializer.serialize(tasks);
+
+            const clonedQuery = Object.assign({}, query);
+            delete clonedQuery['page[size]'];
+            delete clonedQuery['page[number]'];
+            delete clonedQuery.ids;
+            delete clonedQuery.loggedUser;
+            const serializedQuery = serializeObjToQuery(clonedQuery) ? `?${serializeObjToQuery(clonedQuery)}&` : '?';
+            const apiVersion = ctx.mountPath.split('/')[ctx.mountPath.split('/').length - 1];
+            const link = `${ctx.request.protocol}://${ctx.request.host}/${apiVersion}${ctx.request.path}${serializedQuery}`;
+
+            ctx.body = TaskSerializer.serialize(tasks, link);
         } catch (err) {
             if (err instanceof TaskNotFound) {
                 ctx.throw(404, err.message);

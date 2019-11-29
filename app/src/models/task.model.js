@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const uuidV4 = require('uuid/v4');
 const { task } = require('rw-doc-importer-messages');
 const { TASK_STATUS } = require('app.constants');
+const mongoosePaginate = require('mongoose-paginate');
 
 const { Schema } = mongoose;
 const { MESSAGE_TYPES } = task;
@@ -21,5 +22,7 @@ const Task = new Schema({
     logs: [{ type: Schema.Types.Mixed }],
     error: { type: String, trim: true }
 });
+
+Task.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('Task', Task);

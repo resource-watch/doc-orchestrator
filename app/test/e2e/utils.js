@@ -49,7 +49,18 @@ const createTask = (status, type, createdAt = new Date(), reads = 0) => {
     };
 };
 
+const validateTask = (responseTask, expectedTask) => {
+    responseTask.should.have.property('datasetId').and.equal(expectedTask.datasetId);
+    responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
+    responseTask.should.have.property('reads').and.equal(0);
+    responseTask.should.have.property('writes').and.equal(0);
+    responseTask.should.have.property('message').and.be.an('object');
+    responseTask.should.have.property('status').and.equal(expectedTask.status);
+    responseTask.should.have.property('type').and.equal(expectedTask.type);
+};
+
 module.exports = {
     createTask,
-    deserializeTask
+    deserializeTask,
+    validateTask
 };

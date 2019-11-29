@@ -1,3 +1,10 @@
+# 29/11/2019
+- Paginate GET tasks endpoint.
+- Clear error message when starting a new operation.
+
+# 27/11/2019
+- Add error message to dataset when scheduling a new task while an active one exists.
+
 # 27/11/2019
 - Modify dataset append so that it adds the newly appended file URLs to the dataset's `sources` list.
 
