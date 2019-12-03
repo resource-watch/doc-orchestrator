@@ -206,7 +206,8 @@ class StatusQueueService extends QueueService {
             error: this.statusMsg.error
         });
         await DatasetService.update(this.currentTask.datasetId, {
-            status: DATASET_STATUS.ERROR
+            status: DATASET_STATUS.ERROR,
+            errorMessage: this.statusMsg.error
         });
     }
 
