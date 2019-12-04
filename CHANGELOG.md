@@ -1,3 +1,6 @@
+# 04/12/2019
+- Generate more meaningful error messages and pass them along the pipeline to improve visibility to end user.
+
 # 29/11/2019
 - Paginate GET tasks endpoint.
 - Clear error message when starting a new operation.
