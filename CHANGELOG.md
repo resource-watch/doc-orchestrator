@@ -1,4 +1,5 @@
 # 05/12/2019
+- Update dataset `sources` with new files on overwrite and concat.
 - Add tests to cover dataset overwrite process.
 
 # 04/12/2019

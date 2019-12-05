@@ -40,13 +40,22 @@ class StatusQueueService extends QueueService {
             status: TASK_STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
+
+        const dataset = await DatasetService.get(this.currentTask.datasetId);
+        const { connectorUrl, sources } = dataset.data.attributes;
+
         // update the dataset
         const datasetProps = {
-            status: DATASET_STATUS.PENDING,
+            status: DATASET_STATUS.PENDING
         };
         if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CONCAT) {
             datasetProps.tableName = this.statusMsg.index;
+            datasetProps.sources = this.currentTask.message.fileUrl;
+        } else {
+            datasetProps.sources = uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)));
+
         }
+
         await DatasetService.update(this.currentTask.datasetId, datasetProps);
     }
 
