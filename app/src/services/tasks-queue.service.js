@@ -35,7 +35,6 @@ class TasksQueueService extends QueueService {
                 executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, this.taskMsg);
                 break;
             case task.MESSAGE_TYPES.TASK_OVERWRITE:
-                // first step is creating the index, then we will catch the WRITTEN_DATA to delete the previous INDEX
                 executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE, this.taskMsg);
                 break;
             case task.MESSAGE_TYPES.TASK_DELETE_INDEX:

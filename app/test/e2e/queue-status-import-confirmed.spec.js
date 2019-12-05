@@ -28,6 +28,10 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
             throw Error(`Running the test suite with NODE_ENV ${process.env.NODE_ENV} may result in permanent data loss. Please use NODE_ENV=test.`);
         }
 
+        requester = await getTestServer();
+    });
+
+    beforeEach(async () => {
         let connectAttempts = 10;
         while (connectAttempts >= 0 && rabbitmqConnection === null) {
             try {
@@ -42,26 +46,17 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
         }
 
         channel = await rabbitmqConnection.createConfirmChannel();
-        await channel.assertQueue(config.get('queues.status'));
-        await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
+        await channel.assertQueue(config.get('queues.status'));
 
-        requester = await getTestServer();
-    });
-
-    beforeEach(async () => {
-        await channel.purgeQueue(config.get('queues.status'));
-        await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
-
-        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
-        statusQueueStatus.messageCount.should.equal(0);
-
-        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        tasksQueueStatus.messageCount.should.equal(0);
+        await channel.purgeQueue(config.get('queues.status'));
 
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
+
+        const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
+        statusQueueStatus.messageCount.should.equal(0);
 
         await Task.deleteMany({}).exec();
     });
@@ -226,7 +221,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
         };
 
         return new Promise((resolve) => {
-            channel.consume(config.get('queues.executorTasks'), validateExecutorTasksQueueMessages(resolve), { exclusive: true });
+            channel.consume(config.get('queues.executorTasks'), validateExecutorTasksQueueMessages(resolve));
         });
     });
 
@@ -402,6 +397,72 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
         createdTask.should.have.property('updatedAt').and.be.a('date');
     });
 
+    it('Consume a STATUS_IMPORT_CONFIRMED message for a TASK_OVERWRITE should create a EXECUTION_DELETE_INDEX message (happy case)', async () => {
+        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_OVERWRITE)).save();
+
+        const message = {
+            id: 'd492cef7-e287-4bd8-9128-f034a3b531ef',
+            type: 'STATUS_IMPORT_CONFIRMED',
+            taskId: fakeTask1.id,
+            lastCheckedDate: '2019-03-29T08:43:08.091Z'
+        };
+
+        const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
+        preStatusQueueStatus.messageCount.should.equal(0);
+        const existingTaskList = await Task.find({}).exec();
+        existingTaskList.should.be.an('array').and.have.lengthOf(1);
+
+        await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
+
+        let expectedExecutorQueueMessageCount = 1;
+
+        const validateExecutorTasksQueueMessages = (resolve, reject) => async (msg) => {
+            const content = JSON.parse(msg.content.toString());
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                    content.should.have.property('id');
+                    content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX);
+                    content.should.have.property('index').and.equal(fakeTask1.message.index);
+                    content.should.have.property('taskId').and.equal(message.taskId);
+
+                } else {
+                    reject(new Error(`Unexpected message type: ${content.type}`));
+                }
+            } catch (err) {
+                reject(err);
+            }
+            await channel.ack(msg);
+            const createdTasks = await Task.find({}).exec();
+
+            createdTasks.should.be.an('array').and.have.lengthOf(1);
+            const createdTask = createdTasks[0];
+            createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
+            createdTask.should.have.property('reads').and.equal(0);
+            createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+            createdTask.should.have.property('_id').and.equal(fakeTask1.id);
+            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_OVERWRITE);
+            createdTask.should.have.property('message').and.be.an('object');
+            createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
+            createdTask.should.have.property('createdAt').and.be.a('date');
+            createdTask.should.have.property('updatedAt').and.be.a('date');
+
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                reject(new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`));
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
+        };
+
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorTasksQueueMessages(resolve));
+        });
+    });
+
     afterEach(async () => {
         await Task.deleteMany({}).exec();
 
@@ -422,9 +483,8 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
             nock.cleanAll();
             throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
-    });
 
-    after(async () => {
-        rabbitmqConnection.close();
+        await rabbitmqConnection.close();
+        rabbitmqConnection = null;
     });
 });

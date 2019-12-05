@@ -1,3 +1,6 @@
+# 05/12/2019
+- Add tests to cover dataset overwrite process.
+
 # 04/12/2019
 - Generate more meaningful error messages and pass them along the pipeline to improve visibility to end user.
 
