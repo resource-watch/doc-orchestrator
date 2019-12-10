@@ -100,12 +100,12 @@ class TaskService {
     }
 
     static async create(taskData) {
-        logger.debug(`[TaskService]: Creating task`);
-        logger.debug(`[DBACCESS-SAVE]: new ${taskData.type} task`);
+        logger.debug(`[TaskService]: Creating new task of type ${taskData.type}`);
         const task = await new Task({
             _id: taskData.id,
             type: taskData.type,
             message: taskData,
+            fileCount: taskData.fileUrl.length,
             reads: 0,
             writes: 0,
             datasetId: taskData.datasetId
@@ -115,7 +115,6 @@ class TaskService {
 
     static async update(id, taskData) {
         logger.debug(`[TaskService]: Updating task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         task.status = taskData.status || task.status;
         task.index = taskData.index || task.index;
@@ -132,7 +131,6 @@ class TaskService {
 
     static async resetCounters(id) {
         logger.debug(`[TaskService]: ResetCounters of task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         task.reads = 0;
         task.writes = 0;
@@ -143,7 +141,6 @@ class TaskService {
 
     static async delete(id) {
         logger.debug(`[TaskService]: Deleting task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         logger.debug(`[DBACCESS-REMOVE]: task.id ${id}`);
         task = await task.remove();
@@ -152,7 +149,6 @@ class TaskService {
 
     static async getAll(query = {}) {
         logger.debug(`[TaskService]: Getting all tasks`);
-        logger.debug(`[DBACCESS-FIND]: tasks`);
 
         const page = query['page[number]'] ? parseInt(query['page[number]'], 10) : 1;
         const limit = query['page[size]'] ? parseInt(query['page[size]'], 10) : 10;

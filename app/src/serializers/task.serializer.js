@@ -11,6 +11,7 @@ class TaskSerializer {
                 status: el.status,
                 reads: el.reads,
                 writes: el.writes,
+                fileCount: el.fileCount,
                 createdAt: el.createdAt,
                 updatedAt: el.updatedAt,
                 index: el.index,

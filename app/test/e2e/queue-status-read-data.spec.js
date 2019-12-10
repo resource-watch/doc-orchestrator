@@ -8,8 +8,8 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
-const { createTask } = require('./utils');
+const { getTestServer } = require('./utils/test-server');
+const { createTask } = require('./utils/helpers');
 
 const should = chai.should();
 
@@ -67,7 +67,10 @@ describe('STATUS_READ_DATA handling process', () => {
     });
 
     it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
 
         const message = {
             id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
@@ -95,6 +98,7 @@ describe('STATUS_READ_DATA handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
         createdTask.should.have.property('reads').and.equal(1);
         createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('fileCount').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);

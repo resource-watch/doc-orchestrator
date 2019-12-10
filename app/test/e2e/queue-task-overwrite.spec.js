@@ -8,7 +8,7 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
+const { getTestServer } = require('./utils/test-server');
 
 const should = chai.should();
 
@@ -112,6 +112,7 @@ describe('TASK_OVERWRITE handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
             createdTask.should.have.property('reads').and.equal(0);
             createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('fileCount').and.equal(1);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
             createdTask.should.have.property('_id').and.equal(message.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_OVERWRITE);

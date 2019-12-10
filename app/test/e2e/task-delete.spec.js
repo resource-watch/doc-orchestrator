@@ -2,11 +2,13 @@
 const nock = require('nock');
 const chai = require('chai');
 const Task = require('models/task.model');
-const { ROLES } = require('./test.constants');
-const { createTask, deserializeTask } = require('./utils');
-const { getTestServer } = require('./test-server');
+const appConstants = require('app.constants');
+const { task } = require('rw-doc-importer-messages');
+const { ROLES } = require('./utils/test.constants');
+const { createTask, deserializeTask } = require('./utils/helpers');
+const { getTestServer } = require('./utils/test-server');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 
@@ -53,22 +55,26 @@ describe('Task delete tests', () => {
     });
 
     it('Delete an existent task should return 200', async () => {
-        const fakeTask = await new Task(createTask('SAVED', 'TASK_CREATE')).save();
+        const fakeTask = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
 
         const response = await requester
             .delete(`/api/v1/doc-importer/task/${fakeTask._id}?loggedUser=${JSON.stringify(ROLES.ADMIN)}`)
             .send();
-        const task = deserializeTask(response);
+        const responseTask = deserializeTask(response);
 
         response.status.should.equal(200);
         response.body.should.have.property('data').and.be.an('object');
-        task.should.have.property('datasetId').and.equal(fakeTask.datasetId);
-        task.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
-        task.should.have.property('reads').and.equal(0);
-        task.should.have.property('writes').and.equal(0);
-        task.should.have.property('message').and.be.an('object');
-        task.should.have.property('status').and.equal(fakeTask.status);
-        task.should.have.property('type').and.equal(fakeTask.type);
+        responseTask.should.have.property('datasetId').and.equal(fakeTask.datasetId);
+        responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
+        responseTask.should.have.property('reads').and.equal(0);
+        responseTask.should.have.property('writes').and.equal(0);
+        responseTask.should.have.property('fileCount').and.equal(0);
+        responseTask.should.have.property('message').and.be.an('object');
+        responseTask.should.have.property('status').and.equal(fakeTask.status);
+        responseTask.should.have.property('type').and.equal(fakeTask.type);
     });
 
     afterEach(() => {

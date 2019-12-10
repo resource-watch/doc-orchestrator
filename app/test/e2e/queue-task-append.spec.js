@@ -8,7 +8,7 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
+const { getTestServer } = require('./utils/test-server');
 
 const should = chai.should();
 
@@ -42,6 +42,10 @@ describe('TASK_APPEND handling process', () => {
         requester = await getTestServer();
 
         process.on('unhandledRejection', should.fail);
+        // process.on('unhandledRejection', (error) => {
+        //     console.error(error);
+        //     should.fail(error);
+        // });
     });
 
     beforeEach(async () => {
@@ -74,7 +78,7 @@ describe('TASK_APPEND handling process', () => {
             id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
             type: 'TASK_APPEND',
             datasetId: timestamp,
-            fileUrl: ['http://api.resourcewatch.org/dataset'],
+            fileUrl: ['http://api.resourcewatch.org/dataset', 'http://api.resourcewatch.org/widget'],
             provider: 'json',
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
             append: false
@@ -122,6 +126,7 @@ describe('TASK_APPEND handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
             createdTask.should.have.property('reads').and.equal(0);
             createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('fileCount').and.equal(2);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
             createdTask.should.have.property('_id').and.equal(message.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_APPEND);
@@ -205,6 +210,7 @@ describe('TASK_APPEND handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
             createdTask.should.have.property('reads').and.equal(0);
             createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('fileCount').and.equal(1);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
             createdTask.should.have.property('_id').and.equal(message.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_APPEND);

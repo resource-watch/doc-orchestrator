@@ -32,7 +32,7 @@ class StatusQueueService extends QueueService {
     }
 
     async indexCreated() {
-        if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
+        if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CREATE && (this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
             await TaskService.resetCounters(this.currentTask._id);
         }
@@ -264,7 +264,7 @@ class StatusQueueService extends QueueService {
                 await this.error();
                 break;
             default:
-                logger.error('Status Message Type not valid');
+                logger.error(`Status message type not valid: ${this.statusMsg.type}`);
 
         }
     }

@@ -3,11 +3,13 @@ const nock = require('nock');
 const chai = require('chai');
 const amqp = require('amqplib');
 const config = require('config');
+const appConstants = require('app.constants');
+const { task } = require('rw-doc-importer-messages');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
-const { createTask } = require('./utils');
+const { getTestServer } = require('./utils/test-server');
+const { createTask } = require('./utils/helpers');
 
 chai.should();
 
@@ -65,7 +67,11 @@ describe('Handle new task when an existing task is in progress', () => {
     });
 
     it('Consume a TASK_APPEND message when a message in process already exists should update the dataset with a meaningful error message (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask('INDEX_CREATED', 'TASK_CREATE', new Date('2019-02-01'))).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INDEX_CREATED,
+            type: task.MESSAGE_TYPES.TASK_CREATE,
+            createdAt: new Date('2019-02-01')
+        })).save();
 
         const message = {
             id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',

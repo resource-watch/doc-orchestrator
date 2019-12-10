@@ -8,8 +8,8 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
-const { createTask } = require('./utils');
+const { getTestServer } = require('./utils/test-server');
+const { createTask } = require('./utils/helpers');
 
 const should = chai.should();
 
@@ -68,7 +68,12 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     it('Consume a STATUS_WRITTEN_DATA message should update task read count (happy case, not last write)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 2)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.READ,
+            type: task.MESSAGE_TYPES.TASK_CREATE,
+            createdAt: new Date(),
+            reads: 2
+        })).save();
 
         const message = {
             id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
@@ -99,6 +104,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
         createdTask.should.have.property('reads').and.equal(2);
         createdTask.should.have.property('writes').and.equal(1);
+        createdTask.should.have.property('fileCount').and.equal(0);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
         createdTask.should.have.property('message').and.be.an('object');
@@ -119,7 +125,12 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     it('Consume a STATUS_WRITTEN_DATA message should update task read count (happy case, last write)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.READ, task.MESSAGE_TYPES.TASK_CREATE, new Date(), 1)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.READ,
+            type: task.MESSAGE_TYPES.TASK_CREATE,
+            createdAt: new Date(),
+            reads: 1
+        })).save();
 
         const message = {
             id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
@@ -162,6 +173,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
             createdTask.should.have.property('reads').and.equal(1);
             createdTask.should.have.property('writes').and.equal(1);
+            createdTask.should.have.property('fileCount').and.equal(0);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
             createdTask.should.have.property('_id').and.equal(fakeTask1.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);

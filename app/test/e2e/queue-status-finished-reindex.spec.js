@@ -8,8 +8,8 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
-const { createTask } = require('./utils');
+const { getTestServer } = require('./utils/test-server');
+const { createTask } = require('./utils/helpers');
 
 const should = chai.should();
 
@@ -67,7 +67,10 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
     });
 
     it('Consume a STATUS_FINISHED_REINDEX message for a TASK_CONCAT should create a EXECUTION_CONFIRM_REINDEX message (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CONCAT)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_CONCAT
+        })).save();
 
         const message = {
             id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
@@ -231,6 +234,7 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
             createdTask.should.have.property('reads').and.equal(0);
             createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('fileCount').and.equal(0);
             createdTask.should.have.property('_id').and.equal(fakeTask1.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);

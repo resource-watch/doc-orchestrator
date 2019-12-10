@@ -1,4 +1,6 @@
 const uuidV4 = require('uuid/v4');
+const { task } = require('rw-doc-importer-messages');
+const appConstants = require('app.constants');
 
 function isArray(element) {
     if (element instanceof Array) {
@@ -24,28 +26,30 @@ const deserializeTask = (response) => {
     return response;
 };
 
-const createTask = (status, type, createdAt = new Date(), reads = 0) => {
+const createTask = (additionalData) => {
     const uuid = uuidV4();
 
     return {
         _id: uuidV4(),
-        status,
-        reads,
+        status: appConstants.TASK_STATUS.INIT,
+        reads: 0,
         writes: 0,
+        files: 0,
         logs: [],
-        type,
-        createdAt,
-        updatedAt: createdAt,
+        type: task.MESSAGE_TYPES.TASK_CREATE,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         message: {
             id: uuidV4(),
-            type,
+            type: additionalData.type || task.MESSAGE_TYPES.TASK_CREATE,
             datasetId: uuid,
             provider: 'csv',
             index: uuidV4(),
             fileUrl: ['https://example.com/file1.json', 'https://example.com/file2.json']
         },
         index: uuidV4(),
-        datasetId: uuid
+        datasetId: uuid,
+        ...additionalData
     };
 };
 

@@ -6,10 +6,10 @@ const config = require('config');
 const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
-const { task, execution } = require('rw-doc-importer-messages');
+const { task, status, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
-const { createTask } = require('./utils');
+const { getTestServer } = require('./utils/test-server');
+const { createTask } = require('./utils/helpers');
 
 const should = chai.should();
 
@@ -52,6 +52,10 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         await channel.assertQueue(config.get('queues.tasks'));
         await channel.assertQueue(config.get('queues.executorTasks'));
 
+        await channel.purgeQueue(config.get('queues.status'));
+        await channel.purgeQueue(config.get('queues.tasks'));
+        await channel.purgeQueue(config.get('queues.executorTasks'));
+
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
@@ -65,12 +69,16 @@ describe('STATUS_INDEX_CREATED handling process', () => {
     });
 
     it('Consume a STATUS_INDEX_CREATED message for a TASK_CREATE task should update dataset tableName and task (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
 
         const message = {
             id: 'b296457a-f083-4bda-a428-73ae974f5f22',
-            type: 'STATUS_INDEX_CREATED',
+            type: status.MESSAGE_TYPES.STATUS_INDEX_CREATED,
             taskId: fakeTask1.id,
+            fileUrl: ['http://api.resourcewatch.org/dataset', 'http://api.resourcewatch.org/widget'],
             index: 'index_1552479168458_1552479168503'
         };
 
@@ -150,34 +158,6 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         // Give the code some time to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
-        let expectedExecutorQueueMessageCount = 1;
-
-        const validateExecutorQueueMessages = resolve => async (msg) => {
-            const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
-                    content.should.have.property('id');
-                    content.should.have.property('taskId').and.equal(message.taskId);
-                    content.should.have.property('index').and.equal(fakeTask1.index);
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
-            }
-            await channel.ack(msg);
-
-            expectedExecutorQueueMessageCount -= 1;
-
-            if (expectedExecutorQueueMessageCount < 0) {
-                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
-            }
-
-            if (expectedExecutorQueueMessageCount === 0) {
-                resolve();
-            }
-        };
-
         const createdTasks = await Task.find({}).exec();
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
@@ -185,6 +165,8 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('fileCount').and.equal(0);
+        createdTask.should.have.property('fileCount').and.equal(fakeTask1.fileCount);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
@@ -192,14 +174,13 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
-
-        return new Promise((resolve) => {
-            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve));
-        });
     });
 
     it('Consume a STATUS_INDEX_CREATED message for a TASK_OVERWRITE task should update dataset tableName and task (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_OVERWRITE)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_OVERWRITE
+        })).save();
 
         const message = {
             id: 'b296457a-f083-4bda-a428-73ae974f5f22',
@@ -319,6 +300,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('fileCount').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_OVERWRITE);
@@ -333,7 +315,10 @@ describe('STATUS_INDEX_CREATED handling process', () => {
     });
 
     it('Consume a STATUS_INDEX_CREATED message for a TASK_CONCAT task should update dataset tableName and task (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CONCAT)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_CONCAT
+        })).save();
 
         const message = {
             id: 'b296457a-f083-4bda-a428-73ae974f5f22',
@@ -452,6 +437,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('fileCount').and.equal(0);
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);

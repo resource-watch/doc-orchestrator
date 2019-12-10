@@ -8,8 +8,8 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
-const { createTask } = require('./utils');
+const { getTestServer } = require('./utils/test-server');
+const { createTask } = require('./utils/helpers');
 
 chai.should();
 
@@ -67,7 +67,10 @@ describe('STATUS_ERROR handling process', () => {
     });
 
     it('Consume a STATUS_ERROR message for a task should set task and dataset statuses to error and set the appropriate error messages (happy case)', async () => {
-        const fakeTask1 = await new Task(createTask(appConstants.TASK_STATUS.INIT, task.MESSAGE_TYPES.TASK_CREATE)).save();
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
 
         nock(process.env.CT_URL)
             .patch(`/v1/dataset/${fakeTask1.datasetId}`, {
@@ -157,6 +160,7 @@ describe('STATUS_ERROR handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.ERROR);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('fileCount').and.equal(0);
         createdTask.should.have.property('error').and.equal('Exceeded maximum number of attempts to process message of type "EXECUTION_READ_FILE". Error message: "Something bad happened"');
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
