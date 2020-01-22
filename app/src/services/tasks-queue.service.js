@@ -70,11 +70,18 @@ class TasksQueueService extends QueueService {
         try {
             // Create mongo task entity
             this.task = await TaskService.create(this.taskMsg);
+
             // Update dataset
-            await DatasetService.update(this.task.datasetId, {
+            const datasetUpdateBody = {
                 taskId: `/v1/doc-importer/task/${this.task._id}`,
                 errorMessage: ''
-            });
+            };
+            if (this.taskMsg.type === task.MESSAGE_TYPES.TASK_OVERWRITE) {
+                datasetUpdateBody.legend = this.taskMsg.legend || {};
+            }
+
+            await DatasetService.update(this.task.datasetId, datasetUpdateBody);
+
             // Process message
             await this.processMessage();
             // All OK -> msg sent, so ack emitted

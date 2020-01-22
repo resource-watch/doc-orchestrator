@@ -72,7 +72,7 @@ describe('TASK_OVERWRITE handling process', () => {
         };
 
         nock(`${process.env.CT_URL}`)
-            .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
+            .patch(`/v1/dataset/${timestamp}`, body => JSON.stringify(body.legend) === JSON.stringify({}) && body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
             .once()
             .reply(200);
 

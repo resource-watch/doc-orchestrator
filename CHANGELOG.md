@@ -1,3 +1,6 @@
+# 22/01/2020
+- Have TASK_OVERWRITE messages set a dataset's `legend` field.
+
 # 05/12/2019
 - Update dataset `sources` with new files on overwrite and concat.
 - Add tests to cover dataset overwrite process.
