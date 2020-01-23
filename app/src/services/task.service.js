@@ -105,7 +105,7 @@ class TaskService {
             _id: taskData.id,
             type: taskData.type,
             message: taskData,
-            fileCount: taskData.fileUrl.length,
+            filesProcessed: 0,
             reads: 0,
             writes: 0,
             datasetId: taskData.datasetId
@@ -120,6 +120,7 @@ class TaskService {
         task.index = taskData.index || task.index;
         task.elasticTaskId = taskData.elasticTaskId || task.elasticTaskId;
         task.error = taskData.error || task.error;
+        task.filesProcessed = taskData.filesProcessed || task.filesProcessed;
         if (taskData.log && taskData.log instanceof Object) {
             task.logs.push(taskData.log);
         }
@@ -203,7 +204,12 @@ class TaskService {
     }
 
     static async checkCounter(task) {
-        logger.debug(`[TaskService]: checking counter of task with id:  ${task.id}`);
+        logger.debug(`[TaskService]: checking counter of task with id: ${task.id}`);
+
+        if (task.filesProcessed < task.message.fileUrl.length) {
+            return false;
+        }
+
         if ((task.writes - task.reads === 0) && (task.status === TASK_STATUS.READ)) {
             return true;
         }

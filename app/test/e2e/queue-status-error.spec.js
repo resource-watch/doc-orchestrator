@@ -160,7 +160,7 @@ describe('STATUS_ERROR handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.ERROR);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('fileCount').and.equal(0);
+        createdTask.should.have.property('filesProcessed').and.equal(0);
         createdTask.should.have.property('error').and.equal('Exceeded maximum number of attempts to process message of type "EXECUTION_READ_FILE". Error message: "Something bad happened"');
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);

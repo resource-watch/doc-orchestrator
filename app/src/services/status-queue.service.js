@@ -84,11 +84,14 @@ class StatusQueueService extends QueueService {
 
     async readFile() {
         // The file has been read completely, just update the status
-        // TODO: this needs to be adapted for scenarios with multiple files
-        const task = await TaskService.update(this.currentTask._id, {
-            status: TASK_STATUS.READ
+        const task = await TaskService.get(this.currentTask._id);
+
+        const updatedTask = await TaskService.update(this.currentTask._id, {
+            status: TASK_STATUS.READ,
+            filesProcessed: task.filesProcessed += 1
         });
-        const finished = await TaskService.checkCounter(task);
+
+        const finished = await TaskService.checkCounter(updatedTask);
         if (finished) {
             // Sending confirm index creation
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT, [{ index: 'index' }]);
@@ -189,7 +192,7 @@ class StatusQueueService extends QueueService {
             status: TASK_STATUS.PERFORMED_REINDEX,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }, { fileCount: 'message.fileUrl.length' }]);
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }, { filesProcessed: 'message.fileUrl.length' }]);
     }
 
     async finishedReindex() {

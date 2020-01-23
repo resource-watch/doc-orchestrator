@@ -71,7 +71,7 @@ describe('Task delete tests', () => {
         responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         responseTask.should.have.property('reads').and.equal(0);
         responseTask.should.have.property('writes').and.equal(0);
-        responseTask.should.have.property('fileCount').and.equal(0);
+        responseTask.should.have.property('filesProcessed').and.equal(0);
         responseTask.should.have.property('message').and.be.an('object');
         responseTask.should.have.property('status').and.equal(fakeTask.status);
         responseTask.should.have.property('type').and.equal(fakeTask.type);

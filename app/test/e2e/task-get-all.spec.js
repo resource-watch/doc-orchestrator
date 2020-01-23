@@ -186,7 +186,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask3.status);
         task1.should.have.property('type').and.equal(fakeTask3.type);
@@ -223,7 +223,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -260,7 +260,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask2.status);
         task1.should.have.property('type').and.equal(fakeTask2.type);
@@ -298,7 +298,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -307,7 +307,7 @@ describe('Task get all tests', () => {
         task2.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task2.should.have.property('reads').and.equal(0);
         task2.should.have.property('writes').and.equal(0);
-        task2.should.have.property('fileCount').and.equal(0);
+        task2.should.have.property('filesProcessed').and.equal(0);
         task2.should.have.property('message').and.be.an('object');
         task2.should.have.property('status').and.equal(fakeTask3.status);
         task2.should.have.property('type').and.equal(fakeTask3.type);
@@ -344,7 +344,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -384,7 +384,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -424,7 +424,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask2.status);
         task1.should.have.property('type').and.equal(fakeTask2.type);
@@ -465,7 +465,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -474,7 +474,7 @@ describe('Task get all tests', () => {
         task2.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task2.should.have.property('reads').and.equal(0);
         task2.should.have.property('writes').and.equal(0);
-        task2.should.have.property('fileCount').and.equal(0);
+        task2.should.have.property('filesProcessed').and.equal(0);
         task2.should.have.property('message').and.be.an('object');
         task2.should.have.property('status').and.equal(fakeTask3.status);
         task2.should.have.property('type').and.equal(fakeTask3.type);
@@ -514,7 +514,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -554,7 +554,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -591,7 +591,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask1.status);
         task1.should.have.property('type').and.equal(fakeTask1.type);
@@ -697,7 +697,7 @@ describe('Task get all tests', () => {
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
-        task1.should.have.property('fileCount').and.equal(0);
+        task1.should.have.property('filesProcessed').and.equal(0);
         task1.should.have.property('message').and.be.an('object');
         task1.should.have.property('status').and.equal(fakeTask4.status);
         task1.should.have.property('type').and.equal(fakeTask4.type);

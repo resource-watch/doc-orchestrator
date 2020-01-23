@@ -126,7 +126,7 @@ describe('TASK_APPEND handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
             createdTask.should.have.property('reads').and.equal(0);
             createdTask.should.have.property('writes').and.equal(0);
-            createdTask.should.have.property('fileCount').and.equal(2);
+            createdTask.should.have.property('filesProcessed').and.equal(0);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
             createdTask.should.have.property('_id').and.equal(message.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_APPEND);
@@ -210,7 +210,7 @@ describe('TASK_APPEND handling process', () => {
             createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
             createdTask.should.have.property('reads').and.equal(0);
             createdTask.should.have.property('writes').and.equal(0);
-            createdTask.should.have.property('fileCount').and.equal(1);
+            createdTask.should.have.property('filesProcessed').and.equal(0);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
             createdTask.should.have.property('_id').and.equal(message.id);
             createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_APPEND);

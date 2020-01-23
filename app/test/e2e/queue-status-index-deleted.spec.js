@@ -6,7 +6,7 @@ const config = require('config');
 const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
-const { task, execution } = require('rw-doc-importer-messages');
+const { task } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
@@ -104,7 +104,7 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('fileCount').and.equal(0);
+        createdTask.should.have.property('filesProcessed').and.equal(0);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
         createdTask.should.have.property('message').and.be.an('object');
@@ -162,7 +162,7 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('fileCount').and.equal(0);
+        createdTask.should.have.property('filesProcessed').and.equal(0);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_OVERWRITE);
         createdTask.should.have.property('message').and.be.an('object');
