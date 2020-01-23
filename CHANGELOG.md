@@ -1,4 +1,5 @@
 # 22/01/2020
+- Update `rw-doc-importer-messages` to v1.4.0.
 - Have TASK_OVERWRITE messages set a dataset's `legend` field.
 
 # 05/12/2019
