@@ -1,4 +1,4 @@
-FROM node:12.11-alpine
+FROM node:12-alpine
 MAINTAINER info@vizzuality.com
 
 ENV NAME doc-orchestrator
@@ -9,11 +9,11 @@ RUN apk update && apk upgrade && \
 
 RUN addgroup $USER && adduser -s /bin/bash -D -G $USER $USER
 
-RUN npm install --unsafe-perm -g bunyan  grunt-cli
+RUN yarn global add bunyan  grunt-cli
 
 RUN mkdir -p /opt/$NAME
 COPY package.json /opt/$NAME/package.json
-RUN cd /opt/$NAME && npm install
+RUN cd /opt/$NAME && yarn install
 
 COPY entrypoint.sh /opt/$NAME/entrypoint.sh
 COPY config /opt/$NAME/config
@@ -21,9 +21,9 @@ COPY config /opt/$NAME/config
 WORKDIR /opt/$NAME
 
 COPY ./app /opt/$NAME/app
-RUN npm update doc-importer-messages
 RUN chown $USER:$USER /opt/$NAME
 
+EXPOSE 5000
 USER $USER
 
 ENTRYPOINT ["./entrypoint.sh"]

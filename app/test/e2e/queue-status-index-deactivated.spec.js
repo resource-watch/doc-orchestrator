@@ -6,8 +6,9 @@ const config = require('config');
 const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
-const { task } = require('rw-doc-importer-messages');
+const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
+const uuidV4 = require('uuid/v4');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
@@ -21,7 +22,7 @@ let channel;
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('STATUS_INDEX_DELETED handling process', () => {
+describe('STATUS_INDEX_DEACTIVATED handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -66,21 +67,24 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         await Task.deleteMany({}).exec();
     });
 
-    it('Consume a STATUS_INDEX_DELETED message for a TASK_CONCAT should set the dataset status to SAVED (happy case)', async () => {
+    it('Consume a STATUS_INDEX_DEACTIVATED message with an index matching the task\'s should update the task status to INDEX_CREATED and index to the message\'s index, and update the dataset\'s status to pending', async () => {
         const fakeTask1 = await new Task(createTask({
             status: appConstants.TASK_STATUS.INIT,
-            type: task.MESSAGE_TYPES.TASK_CONCAT
+            type: task.MESSAGE_TYPES.TASK_APPEND,
+            reads: 0,
+            writes: 0,
+            filesProcessed: 0
         })).save();
 
         const message = {
-            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
-            type: 'STATUS_INDEX_DELETED',
+            id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
+            type: 'STATUS_INDEX_DEACTIVATED',
             taskId: fakeTask1.id,
-            lastCheckedDate: '2019-03-29T08:43:08.091Z'
+            index: fakeTask1.index
         };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1 })
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 0 })
             .once()
             .reply(200, {});
 
@@ -101,44 +105,42 @@ describe('STATUS_INDEX_DELETED handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
+        createdTask.should.have.property('index').and.equal(message.index);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('filesProcessed').and.equal(0);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
+        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_APPEND);
         createdTask.should.have.property('message').and.be.an('object');
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
-
-        const log = createdTask.logs[0];
-
-        log.should.have.property('id').and.equal(message.id);
-        log.should.have.property('taskId').and.equal(message.taskId);
-        log.should.have.property('type').and.equal(message.type);
 
         process.on('unhandledRejection', (error) => {
             should.fail(error);
         });
     });
 
-    it('Consume a STATUS_INDEX_DELETED message for a TASK_OVERWRITE should set the dataset status to SAVED (happy case)', async () => {
+    it('Consume a STATUS_INDEX_DEACTIVATED message with an index not matching the task\'s should update the task status to INDEX_CREATED and index to the message\'s index, and update the dataset\'s status to pending', async () => {
         const fakeTask1 = await new Task(createTask({
             status: appConstants.TASK_STATUS.INIT,
-            type: task.MESSAGE_TYPES.TASK_OVERWRITE
+            type: task.MESSAGE_TYPES.TASK_APPEND,
+            reads: 0,
+            writes: 0,
+            filesProcessed: 0
         })).save();
 
         const message = {
-            id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
-            type: 'STATUS_INDEX_DELETED',
+            id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
+            type: 'STATUS_INDEX_DEACTIVATED',
             taskId: fakeTask1.id,
-            lastCheckedDate: '2019-03-29T08:43:08.091Z'
+            index: uuidV4()
         };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 1 })
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, { status: 0 })
             .once()
             .reply(200, {});
 
@@ -159,32 +161,55 @@ describe('STATUS_INDEX_DELETED handling process', () => {
 
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.SAVED);
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
+        createdTask.should.have.property('index').and.equal(message.index);
         createdTask.should.have.property('reads').and.equal(0);
         createdTask.should.have.property('writes').and.equal(0);
         createdTask.should.have.property('filesProcessed').and.equal(0);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_OVERWRITE);
+        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_APPEND);
         createdTask.should.have.property('message').and.be.an('object');
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        const log = createdTask.logs[0];
+        let expectedExecutorQueueMessageCount = 1;
 
-        log.should.have.property('id').and.equal(message.id);
-        log.should.have.property('taskId').and.equal(message.taskId);
-        log.should.have.property('type').and.equal(message.type);
+        const validateExecutorQueueMessages = resolve => async (msg) => {
+            const content = JSON.parse(msg.content.toString());
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                    content.should.have.property('id');
+                    content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX);
+                    content.should.have.property('index').and.equal(fakeTask1.index);
+                    content.should.have.property('taskId').and.equal(message.taskId);
+                } else {
+                    throw new Error(`Unexpected message type: ${content.type}`);
+                }
+            } catch (err) {
+                throw err;
+            }
 
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
+            await channel.ack(msg);
+
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
+        };
+
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve));
         });
     });
 
     afterEach(async () => {
-        await Task.deleteMany({}).exec();
-
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
@@ -192,10 +217,6 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         await channel.assertQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
-
-        await channel.assertQueue(config.get('queues.tasks'));
-        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        tasksQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
@@ -205,6 +226,8 @@ describe('STATUS_INDEX_DELETED handling process', () => {
     });
 
     after(async () => {
+        await Task.deleteMany({}).exec();
+
         rabbitmqConnection.close();
     });
 });

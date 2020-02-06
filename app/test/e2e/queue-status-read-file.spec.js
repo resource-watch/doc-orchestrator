@@ -17,12 +17,11 @@ let requester;
 let rabbitmqConnection = null;
 let channel;
 
-// let fakeTask1;
 
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('STATUS_WRITTEN_DATA handling process', () => {
+describe('STATUS_READ_FILE handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -67,22 +66,19 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         await Task.deleteMany({}).exec();
     });
 
-    it('Consume a STATUS_WRITTEN_DATA message without being the last write should update task write count', async () => {
+    it('Consume a STATUS_READ_FILE message with reads != writes should update task fileProcessed count (happy case)', async () => {
         const fakeTask1 = await new Task(createTask({
-            status: appConstants.TASK_STATUS.READ,
+            status: appConstants.TASK_STATUS.INIT,
             type: task.MESSAGE_TYPES.TASK_CREATE,
-            createdAt: new Date(),
-            reads: 2,
-            writes: 0
+            reads: 1,
+            writes: 0,
+            filesProcessed: 0
         })).save();
 
         const message = {
-            id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
-            type: 'STATUS_WRITTEN_DATA',
-            taskId: fakeTask1.id,
-            withErrors: false,
-            detail: '',
-            index: 'index_123456789'
+            id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
+            type: 'STATUS_READ_FILE',
+            taskId: fakeTask1.id
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -103,44 +99,35 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         createdTasks.should.be.an('array').and.have.lengthOf(1);
         const createdTask = createdTasks[0];
         createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
-        createdTask.should.have.property('reads').and.equal(2);
-        createdTask.should.have.property('writes').and.equal(1);
-        createdTask.should.have.property('filesProcessed').and.equal(0);
+        createdTask.should.have.property('reads').and.equal(1);
+        createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('filesProcessed').and.equal(1);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
         createdTask.should.have.property('message').and.be.an('object');
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        const log = createdTask.logs[0];
-
-        log.should.have.property('id').and.equal(message.id);
-        log.should.have.property('detail').and.equal(message.detail);
-        log.should.have.property('index').and.equal(message.index);
-        log.should.have.property('taskId').and.equal(message.taskId);
-        log.should.have.property('type').and.equal(message.type);
-        log.should.have.property('withErrors').and.equal(message.withErrors);
+        process.on('unhandledRejection', (error) => {
+            should.fail(error);
+        });
     });
 
-    it('Consume a STATUS_WRITTEN_DATA message on the last write of the last file should update task write count and issue a EXECUTION_CONFIRM_IMPORT message.', async () => {
+    it('Consume a STATUS_READ_FILE message with reads === writes should update task fileProcessed count and issue a EXECUTION_CONFIRM_IMPORT message.', async () => {
         const fakeTask1 = await new Task(createTask({
-            status: appConstants.TASK_STATUS.READ,
+            status: appConstants.TASK_STATUS.INIT,
             type: task.MESSAGE_TYPES.TASK_CREATE,
-            createdAt: new Date(),
             reads: 1,
-            writes: 0,
-            filesProcessed: 2
+            writes: 1,
+            filesProcessed: 1
         })).save();
 
         const message = {
-            id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
-            type: 'STATUS_WRITTEN_DATA',
-            taskId: fakeTask1.id,
-            withErrors: false,
-            detail: '',
-            index: 'index_123456789'
+            id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
+            type: 'STATUS_READ_FILE',
+            taskId: fakeTask1.id
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -149,6 +136,28 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         existingTaskList.should.be.an('array').and.have.lengthOf(1);
 
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
+
+        // Give the code a few seconds to do its thing
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
+        postQueueStatus.messageCount.should.equal(0);
+
+        const createdTasks = await Task.find({}).exec();
+
+        createdTasks.should.be.an('array').and.have.lengthOf(1);
+        const createdTask = createdTasks[0];
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
+        createdTask.should.have.property('reads').and.equal(1);
+        createdTask.should.have.property('writes').and.equal(1);
+        createdTask.should.have.property('filesProcessed').and.equal(2);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
+        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
+        createdTask.should.have.property('message').and.be.an('object');
+        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
+        createdTask.should.have.property('createdAt').and.be.a('date');
+        createdTask.should.have.property('updatedAt').and.be.a('date');
 
         let expectedExecutorQueueMessageCount = 1;
 
@@ -201,67 +210,7 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         });
     });
 
-    it('Consume a STATUS_WRITTEN_DATA message on the "last write" but with files remaining to be processed should update task write count but not issue any EXECUTION_CONFIRM_IMPORT message', async () => {
-        const fakeTask1 = await new Task(createTask({
-            status: appConstants.TASK_STATUS.READ,
-            type: task.MESSAGE_TYPES.TASK_CREATE,
-            createdAt: new Date(),
-            reads: 1,
-            writes: 0,
-            filesProcessed: 1
-        })).save();
-
-        const message = {
-            id: 'abe967e0-90bd-43ed-8c96-ae8c93e1afb3',
-            type: 'STATUS_WRITTEN_DATA',
-            taskId: fakeTask1.id,
-            withErrors: false,
-            detail: '',
-            index: 'index_123456789'
-        };
-
-        const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        preStatusQueueStatus.messageCount.should.equal(0);
-        const existingTaskList = await Task.find({}).exec();
-        existingTaskList.should.be.an('array').and.have.lengthOf(1);
-
-        await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
-
-        // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        postQueueStatus.messageCount.should.equal(0);
-
-        const createdTasks = await Task.find({}).exec();
-
-        createdTasks.should.be.an('array').and.have.lengthOf(1);
-        const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.READ);
-        createdTask.should.have.property('reads').and.equal(1);
-        createdTask.should.have.property('writes').and.equal(1);
-        createdTask.should.have.property('filesProcessed').and.equal(1);
-        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
-        createdTask.should.have.property('message').and.be.an('object');
-        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
-        createdTask.should.have.property('createdAt').and.be.a('date');
-        createdTask.should.have.property('updatedAt').and.be.a('date');
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
-
-        const log = createdTask.logs[0];
-
-        log.should.have.property('id').and.equal(message.id);
-        log.should.have.property('detail').and.equal(message.detail);
-        log.should.have.property('index').and.equal(message.index);
-        log.should.have.property('taskId').and.equal(message.taskId);
-        log.should.have.property('type').and.equal(message.type);
-        log.should.have.property('withErrors').and.equal(message.withErrors);
-    });
-
     afterEach(async () => {
-        await Task.deleteMany({}).exec();
-
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
@@ -269,10 +218,6 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         await channel.assertQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
-
-        await channel.assertQueue(config.get('queues.tasks'));
-        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
-        tasksQueueStatus.messageCount.should.equal(0);
 
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
@@ -282,6 +227,8 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
     });
 
     after(async () => {
+        await Task.deleteMany({}).exec();
+
         rabbitmqConnection.close();
     });
 });

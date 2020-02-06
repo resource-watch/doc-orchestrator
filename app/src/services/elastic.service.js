@@ -38,6 +38,7 @@ class ElasticService {
             });
         });
     }
+
 }
 
 module.exports = new ElasticService();

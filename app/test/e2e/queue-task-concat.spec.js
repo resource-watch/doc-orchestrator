@@ -8,7 +8,7 @@ const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
 const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
-const { getTestServer } = require('./test-server');
+const { getTestServer } = require('./utils/test-server');
 
 const should = chai.should();
 
@@ -40,6 +40,12 @@ describe('TASK_CONCAT handling process', () => {
         }
 
         requester = await getTestServer();
+
+        process.on('unhandledRejection', should.fail);
+        // process.on('unhandledRejection', (error) => {
+        //     console.log(error);
+        //     should.fail(error);
+        // });
     });
 
     beforeEach(async () => {
@@ -62,7 +68,7 @@ describe('TASK_CONCAT handling process', () => {
         const executorTasksQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorTasksQueueStatus.messageCount.should.equal(0);
 
-        Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Consume a TASK_CONCAT message and create a new task and a EXECUTION_CONCAT message (happy case)', async () => {
@@ -78,7 +84,11 @@ describe('TASK_CONCAT handling process', () => {
         };
 
         nock(process.env.CT_URL)
-            .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0,
+                errorMessage: ''
+            })
             .once()
             .reply(200);
 
@@ -92,44 +102,55 @@ describe('TASK_CONCAT handling process', () => {
 
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 3 seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        let expectedExecutorQueueMessageCount = 1;
 
-        const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
-        postQueueStatus.messageCount.should.equal(1);
-
-        const validateMessage = async (msg) => {
+        const validateExecutorQueueMessages = resolve => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            content.should.have.property('datasetId').and.equal(timestamp);
-            content.should.have.property('id');
-            content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
-            content.should.have.property('provider').and.equal('json');
-            content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_CONCAT);
-            content.should.have.property('taskId').and.equal(message.id);
-            content.should.have.property('index').and.match(new RegExp(`index_(\\w*)_(\\w*)`));
-
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CONCAT) {
+                    content.should.have.property('datasetId').and.equal(timestamp);
+                    content.should.have.property('id');
+                    content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
+                    content.should.have.property('provider').and.equal('json');
+                    content.should.have.property('taskId').and.equal(message.id);
+                    content.should.have.property('index').and.match(new RegExp(`index_(\\w*)_(\\w*)`));
+                } else {
+                    throw new Error(`Unexpected message type: ${content.type}`);
+                }
+            } catch (err) {
+                throw err;
+            }
             await channel.ack(msg);
+
+            const createdTasks = await Task.find({}).exec();
+
+            createdTasks.should.be.an('array').and.have.lengthOf(1);
+            const createdTask = createdTasks[0];
+            createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
+            createdTask.should.have.property('reads').and.equal(0);
+            createdTask.should.have.property('writes').and.equal(0);
+            createdTask.should.have.property('filesProcessed').and.equal(0);
+            createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
+            createdTask.should.have.property('_id').and.equal(message.id);
+            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
+            createdTask.should.have.property('message').and.be.an('object');
+            createdTask.should.have.property('datasetId').and.equal(`${timestamp}`);
+            createdTask.should.have.property('createdAt').and.be.a('date');
+            createdTask.should.have.property('updatedAt').and.be.a('date');
+
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
         };
 
-        await channel.consume(config.get('queues.executorTasks'), validateMessage);
-
-        const createdTasks = await Task.find({}).exec();
-
-        createdTasks.should.be.an('array').and.have.lengthOf(1);
-        const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
-        createdTask.should.have.property('reads').and.equal(0);
-        createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
-        createdTask.should.have.property('_id').and.equal(message.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
-        createdTask.should.have.property('message').and.be.an('object');
-        createdTask.should.have.property('datasetId').and.equal(`${timestamp}`);
-        createdTask.should.have.property('createdAt').and.be.a('date');
-        createdTask.should.have.property('updatedAt').and.be.a('date');
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve), { exclusive: true });
         });
     });
 
@@ -148,7 +169,8 @@ describe('TASK_CONCAT handling process', () => {
         nock(`${process.env.CT_URL}`)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
-                status: 0
+                status: 0,
+                errorMessage: ''
             })
             .times(11)
             .reply(500, { error: 'dataset microservice unavailable' });
@@ -171,7 +193,7 @@ describe('TASK_CONCAT handling process', () => {
 
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 3 seconds to do its thing
+        // Give the code a few seconds to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
@@ -180,10 +202,6 @@ describe('TASK_CONCAT handling process', () => {
         const createdTasks = await Task.find({}).exec();
 
         createdTasks.should.be.an('array').and.have.lengthOf(0);
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
     });
 
     it('Consume a TASK_CONCAT message while not being able to reach the dataset microservice (404) should retry 10 times and ot create a task nor issue additional messages', async () => {
@@ -201,7 +219,8 @@ describe('TASK_CONCAT handling process', () => {
         nock(`${process.env.CT_URL}`)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
-                status: 0
+                status: 0,
+                errorMessage: ''
             })
             .times(11)
             .reply(404, { error: 'dataset not found' });
@@ -224,7 +243,7 @@ describe('TASK_CONCAT handling process', () => {
 
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
-        // Give the code 3 seconds to do its thing
+        // Give the code a few seconds to do its thing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
@@ -233,27 +252,20 @@ describe('TASK_CONCAT handling process', () => {
         const createdTasks = await Task.find({}).exec();
 
         createdTasks.should.be.an('array').and.have.lengthOf(0);
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
     });
 
     afterEach(async () => {
-        Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
 
         await channel.assertQueue(config.get('queues.status'));
-        await channel.purgeQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.executorTasks'));
-        await channel.purgeQueue(config.get('queues.executorTasks'));
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
         await channel.assertQueue(config.get('queues.tasks'));
-        await channel.purgeQueue(config.get('queues.tasks'));
         const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         tasksQueueStatus.messageCount.should.equal(0);
 
@@ -269,6 +281,7 @@ describe('TASK_CONCAT handling process', () => {
     });
 
     after(async () => {
+        process.removeListener('unhandledRejection', should.fail);
         rabbitmqConnection.close();
     });
 });

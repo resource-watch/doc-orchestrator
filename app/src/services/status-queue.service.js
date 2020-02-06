@@ -6,7 +6,9 @@ const { execution, status, task } = require('rw-doc-importer-messages');
 const ExecutorTaskQueueService = require('services/executor-task-queue.service');
 const config = require('config');
 const { TASK_STATUS, DATASET_STATUS } = require('app.constants');
-const { get, concat, compact, uniq } = require('lodash');
+const {
+    get, concat, compact, uniq
+} = require('lodash');
 
 class StatusQueueService extends QueueService {
 
@@ -30,7 +32,7 @@ class StatusQueueService extends QueueService {
     }
 
     async indexCreated() {
-        if ((this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
+        if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CREATE && (this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
             await TaskService.resetCounters(this.currentTask._id);
         }
@@ -38,13 +40,22 @@ class StatusQueueService extends QueueService {
             status: TASK_STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
+
+        const dataset = await DatasetService.get(this.currentTask.datasetId);
+        const { connectorUrl, sources } = dataset.data.attributes;
+
         // update the dataset
         const datasetProps = {
-            status: DATASET_STATUS.PENDING,
+            status: DATASET_STATUS.PENDING
         };
         if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CONCAT) {
             datasetProps.tableName = this.statusMsg.index;
+            datasetProps.sources = this.currentTask.message.fileUrl;
+        } else {
+            datasetProps.sources = uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)));
+
         }
+
         await DatasetService.update(this.currentTask.datasetId, datasetProps);
     }
 
@@ -73,11 +84,14 @@ class StatusQueueService extends QueueService {
 
     async readFile() {
         // The file has been read completely, just update the status
-        // TODO: this needs to be adapted for scenarios with multiple files
-        await TaskService.update(this.currentTask._id, {
-            status: TASK_STATUS.READ
+        const task = await TaskService.get(this.currentTask._id);
+
+        const updatedTask = await TaskService.update(this.currentTask._id, {
+            status: TASK_STATUS.READ,
+            filesProcessed: task.filesProcessed += 1
         });
-        const finished = await TaskService.checkCounter(this.statusMsg.taskId);
+
+        const finished = await TaskService.checkCounter(updatedTask);
         if (finished) {
             // Sending confirm index creation
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT, [{ index: 'index' }]);
@@ -86,9 +100,9 @@ class StatusQueueService extends QueueService {
 
     async writtenData() {
         // add write +1
-        await TaskService.addWrite(this.statusMsg.taskId);
+        const task = await TaskService.addWrite(this.statusMsg.taskId);
         // AND NOW CHECK IF WRITES-READS == 0 and TASK_STATUS == READ
-        const finished = await TaskService.checkCounter(this.statusMsg.taskId);
+        const finished = await TaskService.checkCounter(task);
         if (finished) {
             // Sending confirm index creation
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT, [{ index: 'index' }]);
@@ -147,6 +161,20 @@ class StatusQueueService extends QueueService {
             case task.MESSAGE_TYPES.TASK_CONCAT:
                 await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }, { targetIndex: 'index' }]);
                 break;
+            case task.MESSAGE_TYPES.TASK_APPEND: {
+                const dataset = await DatasetService.get(this.currentTask.datasetId);
+                const { connectorUrl, sources } = dataset.data.attributes;
+
+                await TaskService.update(this.currentTask._id, {
+                    status: TASK_STATUS.SAVED
+                });
+                await DatasetService.update(this.currentTask.datasetId, {
+                    status: DATASET_STATUS.SAVED,
+                    connectorUrl: null,
+                    sources: uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)))
+                });
+                break;
+            }
             default:
                 await TaskService.update(this.currentTask._id, {
                     status: TASK_STATUS.SAVED
@@ -164,7 +192,7 @@ class StatusQueueService extends QueueService {
             status: TASK_STATUS.PERFORMED_REINDEX,
             elasticTaskId: this.statusMsg.elasticTaskId
         });
-        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }, { fileCount: 'message.fileUrl.length' }]);
+        await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_REINDEX, [{ elasticTaskId: 'elasticTaskId' }, { filesProcessed: 'message.fileUrl.length' }]);
     }
 
     async finishedReindex() {
@@ -190,7 +218,8 @@ class StatusQueueService extends QueueService {
             error: this.statusMsg.error
         });
         await DatasetService.update(this.currentTask.datasetId, {
-            status: DATASET_STATUS.ERROR
+            status: DATASET_STATUS.ERROR,
+            errorMessage: this.statusMsg.error
         });
     }
 
@@ -238,7 +267,7 @@ class StatusQueueService extends QueueService {
                 await this.error();
                 break;
             default:
-                logger.error('Status Message Type not valid');
+                logger.error(`Status message type not valid: ${this.statusMsg.type}`);
 
         }
     }

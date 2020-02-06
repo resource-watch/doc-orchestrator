@@ -14,7 +14,6 @@ class DatasetService {
         }
         logger.debug(`Updating dataset: ${JSON.stringify(dataset)}`);
 
-
         try {
             return await ctRegisterMicroservice.requestToMicroservice({
                 uri: `/dataset/${id}`,

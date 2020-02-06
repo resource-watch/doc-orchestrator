@@ -2,8 +2,10 @@
 const nock = require('nock');
 const chai = require('chai');
 const Task = require('models/task.model');
-const { createTask, deserializeTask } = require('./utils');
-const { getTestServer } = require('./test-server');
+const { task } = require('rw-doc-importer-messages');
+const appConstants = require('app.constants');
+const { createTask, deserializeTask } = require('./utils/helpers');
+const { getTestServer } = require('./utils/test-server');
 
 const should = chai.should();
 
@@ -21,7 +23,7 @@ describe('Task get tests', () => {
 
         requester = await getTestServer();
 
-        Task.remove({}).exec();
+        await Task.deleteMany({}).exec();
     });
 
     it('Get a non-existent task should return 404', async () => {
@@ -34,22 +36,26 @@ describe('Task get tests', () => {
     });
 
     it('Get an existing task should return 200', async () => {
-        const fakeTask = await new Task(createTask('SAVED', 'TASK_CREATE')).save();
+        const fakeTask = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
 
         const response = await requester
             .get(`/api/v1/doc-importer/task/${fakeTask._id}`)
             .send();
-        const task = deserializeTask(response);
+        const responseTask = deserializeTask(response);
 
         response.status.should.equal(200);
         response.body.should.have.property('data').and.be.an('object');
-        task.should.have.property('datasetId').and.equal(fakeTask.datasetId);
-        task.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
-        task.should.have.property('reads').and.equal(0);
-        task.should.have.property('writes').and.equal(0);
-        task.should.have.property('message').and.be.an('object');
-        task.should.have.property('status').and.equal(fakeTask.status);
-        task.should.have.property('type').and.equal(fakeTask.type);
+        responseTask.should.have.property('datasetId').and.equal(fakeTask.datasetId);
+        responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
+        responseTask.should.have.property('reads').and.equal(0);
+        responseTask.should.have.property('writes').and.equal(0);
+        responseTask.should.have.property('filesProcessed').and.equal(0);
+        responseTask.should.have.property('message').and.be.an('object');
+        responseTask.should.have.property('status').and.equal(fakeTask.status);
+        responseTask.should.have.property('type').and.equal(fakeTask.type);
     });
 
     it('Get an existing task containing a log entry with an elasticTaskId should return 200 with the task details including the Elasticsearch task info (happy case)', async () => {
@@ -102,7 +108,10 @@ describe('Task get tests', () => {
             }
         };
 
-        const fakeTask = await new Task(createTask('SAVED', 'TASK_CREATE')).save();
+        const fakeTask = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
         fakeTask.logs = [
             {
                 id: '782177aa-fb56-4cf9-bf2c-a9d2cc435a13',
@@ -120,19 +129,20 @@ describe('Task get tests', () => {
         const response = await requester
             .get(`/api/v1/doc-importer/task/${fakeTask._id}`)
             .send();
-        const task = deserializeTask(response);
+        const responseTask = deserializeTask(response);
 
         response.status.should.equal(200);
         response.body.should.have.property('data').and.be.an('object');
-        task.should.have.property('datasetId').and.equal(fakeTask.datasetId);
-        task.should.have.property('reads').and.equal(0);
-        task.should.have.property('writes').and.equal(0);
-        task.should.have.property('message').and.be.an('object');
-        task.should.have.property('status').and.equal(fakeTask.status);
-        task.should.have.property('type').and.equal(fakeTask.type);
-        task.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+        responseTask.should.have.property('datasetId').and.equal(fakeTask.datasetId);
+        responseTask.should.have.property('reads').and.equal(0);
+        responseTask.should.have.property('writes').and.equal(0);
+        responseTask.should.have.property('filesProcessed').and.equal(0);
+        responseTask.should.have.property('message').and.be.an('object');
+        responseTask.should.have.property('status').and.equal(fakeTask.status);
+        responseTask.should.have.property('type').and.equal(fakeTask.type);
+        responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        const log = task.logs[0];
+        const log = responseTask.logs[0];
         log.should.have.property('elasticTaskId').and.be.a('string').and.equal('dmv1LILaTX-12NIPKcK3BQ:1440921');
         log.should.have.property('elasticTaskStatus').and.be.an('object').and.deep.equal(elasticTaskResponseObject);
 
@@ -153,7 +163,10 @@ describe('Task get tests', () => {
             status: 404
         };
 
-        const fakeTask = await new Task(createTask('SAVED', 'TASK_CREATE')).save();
+        const fakeTask = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
         fakeTask.logs = [
             {
                 id: '782177aa-fb56-4cf9-bf2c-a9d2cc435a13',
@@ -171,19 +184,20 @@ describe('Task get tests', () => {
         const response = await requester
             .get(`/api/v1/doc-importer/task/${fakeTask._id}`)
             .send();
-        const task = deserializeTask(response);
+        const responseTask = deserializeTask(response);
 
         response.status.should.equal(200);
         response.body.should.have.property('data').and.be.an('object');
-        task.should.have.property('datasetId').and.equal(fakeTask.datasetId);
-        task.should.have.property('reads').and.equal(0);
-        task.should.have.property('writes').and.equal(0);
-        task.should.have.property('message').and.be.an('object');
-        task.should.have.property('status').and.equal(fakeTask.status);
-        task.should.have.property('type').and.equal(fakeTask.type);
-        task.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+        responseTask.should.have.property('datasetId').and.equal(fakeTask.datasetId);
+        responseTask.should.have.property('reads').and.equal(0);
+        responseTask.should.have.property('writes').and.equal(0);
+        responseTask.should.have.property('filesProcessed').and.equal(0);
+        responseTask.should.have.property('message').and.be.an('object');
+        responseTask.should.have.property('status').and.equal(fakeTask.status);
+        responseTask.should.have.property('type').and.equal(fakeTask.type);
+        responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        const log = task.logs[0];
+        const log = responseTask.logs[0];
         log.should.have.property('elasticTaskId').and.be.a('string').and.equal('dmv1LILaTX-12NIPKcK3BQ:1440921');
         log.should.have.property('elasticTaskStatus').and.be.an('object').and.deep.equal(elasticTaskResponseObject);
 
@@ -204,7 +218,10 @@ describe('Task get tests', () => {
             status: 400
         };
 
-        const fakeTask = await new Task(createTask('SAVED', 'TASK_CREATE')).save();
+        const fakeTask = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_CREATE
+        })).save();
         fakeTask.logs = [
             {
                 id: '782177aa-fb56-4cf9-bf2c-a9d2cc435a13',
@@ -222,19 +239,20 @@ describe('Task get tests', () => {
         const response = await requester
             .get(`/api/v1/doc-importer/task/${fakeTask._id}`)
             .send();
-        const task = deserializeTask(response);
+        const responseTask = deserializeTask(response);
 
         response.status.should.equal(200);
         response.body.should.have.property('data').and.be.an('object');
-        task.should.have.property('datasetId').and.equal(fakeTask.datasetId);
-        task.should.have.property('reads').and.equal(0);
-        task.should.have.property('writes').and.equal(0);
-        task.should.have.property('message').and.be.an('object');
-        task.should.have.property('status').and.equal(fakeTask.status);
-        task.should.have.property('type').and.equal(fakeTask.type);
-        task.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+        responseTask.should.have.property('datasetId').and.equal(fakeTask.datasetId);
+        responseTask.should.have.property('reads').and.equal(0);
+        responseTask.should.have.property('writes').and.equal(0);
+        responseTask.should.have.property('filesProcessed').and.equal(0);
+        responseTask.should.have.property('message').and.be.an('object');
+        responseTask.should.have.property('status').and.equal(fakeTask.status);
+        responseTask.should.have.property('type').and.equal(fakeTask.type);
+        responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
 
-        const log = task.logs[0];
+        const log = responseTask.logs[0];
         log.should.have.property('elasticTaskId').and.be.a('string').and.equal('dmv1LILaTX-12NIPKcK3BQ:1440921');
         log.should.have.property('elasticTaskStatus').and.be.an('object').and.deep.equal(elasticTaskResponseObject);
 
@@ -248,7 +266,7 @@ describe('Task get tests', () => {
         }
     });
 
-    after(() => {
-        Task.remove({}).exec();
+    after(async () => {
+        await Task.deleteMany({}).exec();
     });
 });

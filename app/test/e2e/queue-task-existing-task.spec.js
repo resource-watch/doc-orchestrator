@@ -4,24 +4,23 @@ const chai = require('chai');
 const amqp = require('amqplib');
 const config = require('config');
 const appConstants = require('app.constants');
+const { task } = require('rw-doc-importer-messages');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
-const { task } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
 let channel;
 
-
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('STATUS_READ_DATA handling process', () => {
+describe('Handle new task when an existing task is in progress', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -41,15 +40,16 @@ describe('STATUS_READ_DATA handling process', () => {
             throw new RabbitMQConnectionError();
         }
 
-        channel = await rabbitmqConnection.createConfirmChannel();
-        await channel.assertQueue(config.get('queues.status'));
-        await channel.assertQueue(config.get('queues.tasks'));
-        await channel.assertQueue(config.get('queues.executorTasks'));
-
         requester = await getTestServer();
     });
 
     beforeEach(async () => {
+        channel = await rabbitmqConnection.createConfirmChannel();
+
+        await channel.assertQueue(config.get('queues.status'));
+        await channel.assertQueue(config.get('queues.tasks'));
+        await channel.assertQueue(config.get('queues.executorTasks'));
+
         await channel.purgeQueue(config.get('queues.status'));
         await channel.purgeQueue(config.get('queues.tasks'));
         await channel.purgeQueue(config.get('queues.executorTasks'));
@@ -66,53 +66,46 @@ describe('STATUS_READ_DATA handling process', () => {
         await Task.deleteMany({}).exec();
     });
 
-    it('Consume a STATUS_READ_DATA message should update task read count (happy case)', async () => {
+    it('Consume a TASK_APPEND message when a message in process already exists should update the dataset with a meaningful error message (happy case)', async () => {
         const fakeTask1 = await new Task(createTask({
-            status: appConstants.TASK_STATUS.INIT,
-            type: task.MESSAGE_TYPES.TASK_CREATE
+            status: appConstants.TASK_STATUS.INDEX_CREATED,
+            type: task.MESSAGE_TYPES.TASK_CREATE,
+            createdAt: new Date('2019-02-01')
         })).save();
 
         const message = {
-            id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
-            type: 'STATUS_READ_DATA',
-            taskId: fakeTask1.id
+            id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
+            type: 'TASK_APPEND',
+            datasetId: fakeTask1.datasetId,
+            fileUrl: ['http://api.resourcewatch.org/dataset'],
+            provider: 'json',
+            index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
+            append: false
         };
 
-        const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        preStatusQueueStatus.messageCount.should.equal(0);
-        const existingTaskList = await Task.find({}).exec();
-        existingTaskList.should.be.an('array').and.have.lengthOf(1);
+        const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
+        preDocsQueueStatus.messageCount.should.equal(0);
+        const preQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        preQueueStatus.messageCount.should.equal(0);
+        const preTaskList = await Task.find({}).exec();
+        preTaskList.should.be.an('array').and.have.lengthOf(1);
 
-        await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
+        return new Promise((resolve) => {
+            nock(process.env.CT_URL)
+                .patch(`/v1/dataset/${fakeTask1.datasetId}`, {
+                    status: 1,
+                    errorMessage: `Task(s) ${fakeTask1.id} already running, operation cancelled.`
+                })
+                .once()
+                .reply(200, () => resolve());
 
-        // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
-        postQueueStatus.messageCount.should.equal(0);
-
-        const createdTasks = await Task.find({}).exec();
-
-        createdTasks.should.be.an('array').and.have.lengthOf(1);
-        const createdTask = createdTasks[0];
-        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
-        createdTask.should.have.property('reads').and.equal(1);
-        createdTask.should.have.property('writes').and.equal(0);
-        createdTask.should.have.property('filesProcessed').and.equal(0);
-        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
-        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
-        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
-        createdTask.should.have.property('message').and.be.an('object');
-        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
-        createdTask.should.have.property('createdAt').and.be.a('date');
-        createdTask.should.have.property('updatedAt').and.be.a('date');
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
+            channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
         });
     });
 
     afterEach(async () => {
+        await Task.deleteMany({}).exec();
+
         await channel.assertQueue(config.get('queues.status'));
         const statusQueueStatus = await channel.checkQueue(config.get('queues.status'));
         statusQueueStatus.messageCount.should.equal(0);
@@ -121,16 +114,21 @@ describe('STATUS_READ_DATA handling process', () => {
         const executorQueueStatus = await channel.checkQueue(config.get('queues.executorTasks'));
         executorQueueStatus.messageCount.should.equal(0);
 
+        await channel.assertQueue(config.get('queues.tasks'));
+        const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
+        tasksQueueStatus.messageCount.should.equal(0);
+
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
             nock.cleanAll();
             throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
         }
+
+        await channel.close();
+        channel = null;
     });
 
     after(async () => {
-        await Task.deleteMany({}).exec();
-
         rabbitmqConnection.close();
     });
 });

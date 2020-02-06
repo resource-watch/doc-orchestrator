@@ -1,7 +1,6 @@
 const logger = require('logger');
 const Task = require('models/task.model');
 const TaskNotFound = require('errors/task-not-found.error');
-const TaskAlreadyRunningError = require('errors/task-already-running.error');
 const { TASK_STATUS } = require('app.constants');
 const elasticService = require('services/elastic.service');
 
@@ -101,12 +100,12 @@ class TaskService {
     }
 
     static async create(taskData) {
-        logger.debug(`[TaskService]: Creating task`);
-        logger.debug(`[DBACCESS-SAVE]: new ${taskData.type} task`);
+        logger.debug(`[TaskService]: Creating new task of type ${taskData.type}`);
         const task = await new Task({
             _id: taskData.id,
             type: taskData.type,
             message: taskData,
+            filesProcessed: 0,
             reads: 0,
             writes: 0,
             datasetId: taskData.datasetId
@@ -116,12 +115,12 @@ class TaskService {
 
     static async update(id, taskData) {
         logger.debug(`[TaskService]: Updating task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         task.status = taskData.status || task.status;
         task.index = taskData.index || task.index;
         task.elasticTaskId = taskData.elasticTaskId || task.elasticTaskId;
         task.error = taskData.error || task.error;
+        task.filesProcessed = taskData.filesProcessed || task.filesProcessed;
         if (taskData.log && taskData.log instanceof Object) {
             task.logs.push(taskData.log);
         }
@@ -133,7 +132,6 @@ class TaskService {
 
     static async resetCounters(id) {
         logger.debug(`[TaskService]: ResetCounters of task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         task.reads = 0;
         task.writes = 0;
@@ -144,7 +142,6 @@ class TaskService {
 
     static async delete(id) {
         logger.debug(`[TaskService]: Deleting task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
         let task = await TaskService.get(id);
         logger.debug(`[DBACCESS-REMOVE]: task.id ${id}`);
         task = await task.remove();
@@ -153,11 +150,19 @@ class TaskService {
 
     static async getAll(query = {}) {
         logger.debug(`[TaskService]: Getting all tasks`);
-        logger.debug(`[DBACCESS-FIND]: tasks`);
-        const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
-        const tasks = await Task.find(filteredQuery);
 
-        await Promise.all(tasks.map(async (task) => {
+        const page = query['page[number]'] ? parseInt(query['page[number]'], 10) : 1;
+        const limit = query['page[size]'] ? parseInt(query['page[size]'], 10) : 10;
+
+        const paginationOptions = {
+            page,
+            limit
+        };
+
+        const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
+        const pages = await Task.paginate(filteredQuery, paginationOptions);
+
+        await Promise.all(pages.docs.map(async (task) => {
             await Promise.all(task.logs.map(async (log, logIndex) => {
                 if (!log.elasticTaskId) {
                     return Promise.resolve();
@@ -175,7 +180,7 @@ class TaskService {
             }));
         }));
 
-        return tasks;
+        return pages;
     }
 
     static async addWrite(id) {
@@ -198,24 +203,23 @@ class TaskService {
         return task;
     }
 
-    static async checkCounter(id) {
-        logger.debug(`[TaskService]: checking counter of task with id:  ${id}`);
-        logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
-        const task = await TaskService.get(id);
+    static async checkCounter(task) {
+        logger.debug(`[TaskService]: checking counter of task with id: ${task.id}`);
+
+        if (task.filesProcessed < task.message.fileUrl.length) {
+            return false;
+        }
+
         if ((task.writes - task.reads === 0) && (task.status === TASK_STATUS.READ)) {
             return true;
         }
         return false;
     }
 
-    static async checkRunningTasks(datasetId) {
+    static async getRunningTasks(datasetId) {
         logger.debug(`[TaskService]: checking running task for datasetId:  ${datasetId}`);
         logger.debug(`[DBACCESS-FIND]: task.datasetId: ${datasetId}`);
-        const tasks = await Task.find({ datasetId }).exec();
-        const runningTask = tasks.find(task => ((task.status !== TASK_STATUS.SAVED) && (task.status !== TASK_STATUS.ERROR)));
-        if (runningTask) {
-            throw new TaskAlreadyRunningError(`Task with datasetId '${datasetId}' already running`);
-        }
+        return Task.find({ datasetId, status: { $nin: [TASK_STATUS.SAVED, TASK_STATUS.ERROR] } }).exec();
     }
 
 }
