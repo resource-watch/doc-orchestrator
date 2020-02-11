@@ -2,18 +2,18 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    name: {name}
-  name: {name}
+    name: doc-orchestrator
+  name: doc-orchestrator
 spec:
   revisionHistoryLimit: 0
   template:
     metadata:
       labels:
-        name: {name}
+        name: doc-orchestrator
     spec:
       containers:
-      - name: {name}
-        image: vizzuality/{name}
+      - name: doc-orchestrator
+        image: vizzuality/doc-orchestrator
         imagePullPolicy: Always
         resources:
           requests:
@@ -32,7 +32,7 @@ spec:
           - name: NODE_PATH
             value: app/src
           - name: LOCAL_URL
-            value: http://{name}.default.svc.cluster.local:5000
+            value: http://doc-orchestrator.default.svc.cluster.local:5000
           - name: CT_URL
             valueFrom:
                 secretKeyRef:
