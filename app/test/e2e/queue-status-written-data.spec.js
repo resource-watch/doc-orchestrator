@@ -82,7 +82,9 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
             taskId: fakeTask1.id,
             withErrors: false,
             detail: '',
-            index: 'index_123456789'
+            index: 'index_123456789',
+            hash: 'asbc',
+            file: 'https://file.com/foo.json'
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -122,6 +124,8 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         log.should.have.property('taskId').and.equal(message.taskId);
         log.should.have.property('type').and.equal(message.type);
         log.should.have.property('withErrors').and.equal(message.withErrors);
+        log.should.have.property('hash').and.equal(message.hash);
+        log.should.have.property('file').and.equal(message.file);
     });
 
     it('Consume a STATUS_WRITTEN_DATA message on the last write of the last file should update task write count and issue a EXECUTION_CONFIRM_IMPORT message.', async () => {
@@ -140,7 +144,9 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
             taskId: fakeTask1.id,
             withErrors: false,
             detail: '',
-            index: 'index_123456789'
+            index: 'index_123456789',
+            hash: 'asbc',
+            file: 'https://file.com/foo.json'
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -185,6 +191,17 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
             createdTask.should.have.property('createdAt').and.be.a('date');
             createdTask.should.have.property('updatedAt').and.be.a('date');
 
+            const log = createdTask.logs[0];
+
+            log.should.have.property('id').and.equal(message.id);
+            log.should.have.property('detail').and.equal(message.detail);
+            log.should.have.property('index').and.equal(message.index);
+            log.should.have.property('taskId').and.equal(message.taskId);
+            log.should.have.property('type').and.equal(message.type);
+            log.should.have.property('withErrors').and.equal(message.withErrors);
+            log.should.have.property('hash').and.equal(message.hash);
+            log.should.have.property('file').and.equal(message.file);
+
             expectedExecutorQueueMessageCount -= 1;
 
             if (expectedExecutorQueueMessageCount < 0) {
@@ -217,7 +234,9 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
             taskId: fakeTask1.id,
             withErrors: false,
             detail: '',
-            index: 'index_123456789'
+            index: 'index_123456789',
+            hash: 'asbc',
+            file: 'https://file.com/foo.json'
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -257,6 +276,8 @@ describe('STATUS_WRITTEN_DATA handling process', () => {
         log.should.have.property('taskId').and.equal(message.taskId);
         log.should.have.property('type').and.equal(message.type);
         log.should.have.property('withErrors').and.equal(message.withErrors);
+        log.should.have.property('hash').and.equal(message.hash);
+        log.should.have.property('file').and.equal(message.file);
     });
 
     afterEach(async () => {
