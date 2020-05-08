@@ -1,5 +1,6 @@
 ## 07/05/2020
 
+- Remove HPA causing issues with concurrent access to mongo record.
 - Add file name to `STATUS_WRITTEN_DATA`, `STATUS_READ_FILE` and `STATUS_READ_DATA` messages tests.
 
 # v1.1.0
