@@ -40,6 +40,22 @@ class TaskRouter {
         }
     }
 
+    static async getAnalysis(ctx) {
+        const id = ctx.params.task;
+        logger.info(`[TaskRouter] Getting task analysis for id: ${id}`);
+        try {
+            const task = await TaskService.getAnalysis(id);
+
+            ctx.body = task;
+        } catch (err) {
+            if (err instanceof TaskNotFound) {
+                ctx.throw(404, err.message);
+                return;
+            }
+            throw err;
+        }
+    }
+
     static async getAll(ctx) {
         logger.info(`[TaskRouter] Getting all tasks`);
         const { query } = ctx;
@@ -104,6 +120,7 @@ const authorizationMiddleware = async (ctx, next) => {
 
 router.get('/', TaskRouter.getAll);
 router.get('/:task', TaskRouter.get);
+router.get('/:task/analysis', authorizationMiddleware, TaskRouter.getAnalysis);
 router.delete('/:task', authorizationMiddleware, TaskRouter.delete);
 
 module.exports = router;

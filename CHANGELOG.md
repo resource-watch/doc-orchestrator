@@ -1,3 +1,7 @@
+## 08/05/2020
+
+- Add task analysis endpoint for develop and debug support.
+
 ## 07/05/2020
 
 - Remove HPA causing issues with concurrent access to mongo record.

@@ -22,6 +22,14 @@
       }
     },
     {
+      "path": "/v1/doc-importer/task/:task/analysis",
+      "method": "GET",
+      "redirect": {
+        "method": "GET",
+        "path": "/api/v1/doc-importer/task/:task/analysis"
+      }
+    },
+    {
       "path": "/v1/doc-importer/task/:task",
       "method": "DELETE",
       "authenticated": true,

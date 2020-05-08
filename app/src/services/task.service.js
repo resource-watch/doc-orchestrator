@@ -222,6 +222,39 @@ class TaskService {
         return Task.find({ datasetId, status: { $nin: [TASK_STATUS.SAVED, TASK_STATUS.ERROR] } }).exec();
     }
 
+    static async getAnalysis(taskId) {
+        const fileData = {};
+        const task = await TaskService.get(taskId);
+        task.message.fileUrl.forEach((fileUrl) => {
+            const fileLogs = task.logs.filter(log => log.file === fileUrl);
+            const readData = fileLogs.filter(log => log.type === 'STATUS_READ_DATA');
+            const writtenData = fileLogs.filter(log => log.type === 'STATUS_WRITTEN_DATA');
+
+            const mismatchingReads = readData.filter((readDataLog => !writtenData.find(writtenDataLog => writtenDataLog.file === readDataLog.file && writtenDataLog.hash === readDataLog.hash)));
+            const mismatchingWrites = readData.filter((writtenDataLog => !readData.find(readDataLog => writtenDataLog.file === readDataLog.file && writtenDataLog.hash === readDataLog.hash)));
+
+            fileData[fileUrl] = {
+                readFile: fileLogs.filter(log => log.type === 'STATUS_READ_FILE').length,
+                readData: readData.length,
+                writtenData: writtenData.length,
+                mismatchingReads,
+                mismatchingWrites
+            };
+        });
+
+        return {
+            originalURLCount: task.message.fileUrl.length,
+            filesProcessedOnTask: task.filesProcessed,
+            readsOnTask: task.reads,
+            writesOnTask: task.writes,
+            readFileCount: task.logs.filter(log => log.type === 'STATUS_READ_FILE').length,
+            readDataCount: task.logs.filter(log => log.type === 'STATUS_READ_DATA').length,
+            writtenDataCount: task.logs.filter(log => log.type === 'STATUS_WRITTEN_DATA').length,
+            fileDataCount: Object.keys(fileData).length,
+            fileData
+        };
+    }
+
 }
 
 module.exports = TaskService;
