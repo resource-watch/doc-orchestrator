@@ -65,7 +65,7 @@ describe('TASK_DELETE handling process', () => {
         await Task.deleteMany({}).exec();
     });
 
-    it('Consume a TASK_DELETE message and create a new task and EXECUTION_CREATE message (happy case)', async () => {
+    it('Consume a TASK_DELETE message and create a new task and EXECUTION_DELETE message (happy case)', async () => {
         const timestamp = new Date().getTime();
 
         const message = {
