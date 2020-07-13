@@ -6,4 +6,6 @@
 ## Dependencies
 
 Dependencies on other Microservices:
+
 - [Dataset](https://github.com/resource-watch/dataset/)
+- [Document executor](https://github.com/resource-watch/doc-executor)
