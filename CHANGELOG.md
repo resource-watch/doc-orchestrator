@@ -1,4 +1,6 @@
-## 07/05/2020
+# v1.1.1
+
+## 13/07/2020
 
 - Add file name to `STATUS_WRITTEN_DATA`, `STATUS_READ_FILE` and `STATUS_READ_DATA` messages tests.
 
