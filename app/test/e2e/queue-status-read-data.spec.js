@@ -75,7 +75,8 @@ describe('STATUS_READ_DATA handling process', () => {
         const message = {
             id: '8ad03428-bc93-43b8-8b8c-857a58d000c6',
             type: 'STATUS_READ_DATA',
-            taskId: fakeTask1.id
+            taskId: fakeTask1.id,
+            file: 'https://file.com/foo.json'
         };
 
         const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
@@ -106,6 +107,13 @@ describe('STATUS_READ_DATA handling process', () => {
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');
         createdTask.should.have.property('updatedAt').and.be.a('date');
+
+        const log = createdTask.logs[0];
+
+        log.should.have.property('id').and.equal(message.id);
+        log.should.have.property('taskId').and.equal(message.taskId);
+        log.should.have.property('type').and.equal(message.type);
+        log.should.have.property('file').and.equal(message.file);
 
         process.on('unhandledRejection', (error) => {
             should.fail(error);
