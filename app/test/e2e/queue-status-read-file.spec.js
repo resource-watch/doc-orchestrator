@@ -237,8 +237,9 @@ describe('STATUS_READ_FILE handling process', () => {
 
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
-            nock.cleanAll();
-            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
+            if (pendingMocks.length > 1) {
+                throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
+            }
         }
     });
 

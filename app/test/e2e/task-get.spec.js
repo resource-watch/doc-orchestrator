@@ -122,7 +122,7 @@ describe('Task get tests', () => {
             }];
         await fakeTask.save();
 
-        nock(`http://${process.env.ELASTIC_URL}`)
+        nock(process.env.ELASTIC_URL)
             .get(`/_tasks/${encodeURIComponent(fakeTask.logs[0].elasticTaskId)}`)
             .reply(200, elasticTaskResponseObject);
 
@@ -177,7 +177,7 @@ describe('Task get tests', () => {
             }];
         await fakeTask.save();
 
-        nock(`http://${process.env.ELASTIC_URL}`)
+        nock(process.env.ELASTIC_URL)
             .get(`/_tasks/${encodeURIComponent(fakeTask.logs[0].elasticTaskId)}`)
             .reply(404, elasticTaskResponseObject);
 
@@ -232,7 +232,7 @@ describe('Task get tests', () => {
             }];
         await fakeTask.save();
 
-        nock(`http://${process.env.ELASTIC_URL}`)
+        nock(process.env.ELASTIC_URL)
             .get(`/_tasks/${encodeURIComponent(fakeTask.logs[0].elasticTaskId)}`)
             .reply(400, elasticTaskResponseObject);
 
@@ -261,8 +261,9 @@ describe('Task get tests', () => {
     afterEach(() => {
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
-            nock.cleanAll();
-            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
+            if (pendingMocks.length > 1) {
+                throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
+            }
         }
     });
 

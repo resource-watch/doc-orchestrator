@@ -8,10 +8,10 @@ class ElasticService {
 
     constructor() {
         this.client = new Client({
-            node: `http://${elasticUrl}`
+            node: elasticUrl
         });
 
-        logger.debug('Pinging Elasticsearch server');
+        logger.debug(`Pinging Elasticsearch server at ${elasticUrl}`);
         this.client.ping({
         }, (error) => {
             if (error) {

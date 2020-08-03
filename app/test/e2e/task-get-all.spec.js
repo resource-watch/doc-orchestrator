@@ -679,7 +679,7 @@ describe('Task get all tests', () => {
             }];
         await fakeTask4.save();
 
-        nock(`http://${process.env.ELASTIC_URL}`)
+        nock(process.env.ELASTIC_URL)
             .get(`/_tasks/${encodeURIComponent(fakeTask4.logs[0].elasticTaskId)}`)
             .reply(200, elasticTaskResponseObject);
 
@@ -710,8 +710,9 @@ describe('Task get all tests', () => {
     afterEach(async () => {
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
-            nock.cleanAll();
-            throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
+            if (pendingMocks.length > 1) {
+                throw new Error(`Not all nock interceptors were used: ${pendingMocks}`);
+            }
         }
 
         await Task.deleteMany({}).exec();
