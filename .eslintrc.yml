@@ -31,7 +31,6 @@ rules:
     - single
     - allowTemplateLiterals: true
   no-underscore-dangle: ["error", { "allow": ["_id"] }]
-  import/no-extraneous-dependencies: ["error", { devDependencies: ['app/test/**']}]
   no-await-in-loop: off
   mocha/no-mocha-arrows: [0]
   mocha/no-hooks-for-single-case: [0]
