@@ -1,0 +1,101 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    name: doc-orchestrator
+  name: doc-orchestrator
+spec:
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      labels:
+        name: doc-orchestrator
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: type
+                    operator: In
+                    values:
+                      - apps
+      containers:
+      - name: doc-orchestrator
+        image: vizzuality/doc-orchestrator
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: "0.25"
+            memory: "256M"
+          limits:
+            cpu: "1"
+            memory: "512M"
+        args:
+          - start
+        env:
+          - name: PORT
+            value: "5000"
+          - name: NODE_ENV
+            value: staging
+          - name: NODE_PATH
+            value: app/src
+          - name: LOCAL_URL
+            value: http://doc-orchestrator.default.svc.cluster.local:5000
+          - name: CT_URL
+            valueFrom:
+                secretKeyRef:
+                  name: mssecrets
+                  key: CT_URL
+          - name: CT_TOKEN
+            valueFrom:
+                secretKeyRef:
+                  name: mssecrets
+                  key: CT_TOKEN
+          - name: CT_REGISTER_MODE
+            valueFrom:
+                secretKeyRef:
+                  name: mssecrets
+                  key: CT_REGISTER_MODE
+          - name: API_VERSION
+            valueFrom:
+                secretKeyRef:
+                  name: mssecrets
+                  key: API_VERSION
+          - name: RABBITMQ_URL
+            valueFrom:
+                secretKeyRef:
+                  name: dbsecrets
+                  key: RABBITMQ_URI
+          - name: MONGO_URI
+            valueFrom:
+                secretKeyRef:
+                  name: dbsecrets
+                  key: DOC_ORCHESTRATOR_MONGO_URI
+          - name: ELASTIC_URL
+            valueFrom:
+                secretKeyRef:
+                  name: dbsecrets
+                  key: ELASTIC_URI
+
+        ports:
+          - containerPort: 5000
+        readinessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /healthcheck
+            port: 5000
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /healthcheck
+            port: 5000
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          periodSeconds: 15
+
+      restartPolicy: Always
