@@ -3,6 +3,7 @@ const nock = require('nock');
 const chai = require('chai');
 const amqp = require('amqplib');
 const config = require('config');
+const uuidV4 = require('uuid/v4');
 const appConstants = require('app.constants');
 const Task = require('models/task.model');
 const RabbitMQConnectionError = require('errors/rabbitmq-connection.error');
@@ -11,7 +12,7 @@ const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
@@ -441,6 +442,152 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         createdTask.should.have.property('_id').and.equal(fakeTask1.id);
         createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CONCAT);
+        createdTask.should.have.property('message').and.be.an('object');
+        createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
+        createdTask.should.have.property('createdAt').and.be.a('date');
+        createdTask.should.have.property('updatedAt').and.be.a('date');
+
+        return new Promise((resolve) => {
+            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve));
+        });
+    });
+
+    it('Consume a STATUS_INDEX_CREATED message for a TASK_REINDEX task should update dataset tableName and task (happy case)', async () => {
+        const datasetId = uuidV4();
+
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.INIT,
+            type: task.MESSAGE_TYPES.TASK_REINDEX,
+            datasetId,
+            message: {
+                id: uuidV4(),
+                type: task.MESSAGE_TYPES.TASK_REINDEX,
+                datasetId,
+                provider: 'csv',
+                index: uuidV4()
+            }
+        })).save();
+
+        const message = {
+            id: 'b296457a-f083-4bda-a428-73ae974f5f22',
+            type: 'STATUS_INDEX_CREATED',
+            taskId: fakeTask1.id,
+            index: uuidV4()
+        };
+
+        nock(process.env.CT_URL)
+            .get(`/v1/dataset/${fakeTask1.datasetId}`)
+            .reply(200, {
+                data: {
+                    id: fakeTask1.datasetId,
+                    type: 'dataset',
+                    attributes: {
+                        name: 'Resource Watch datasets list',
+                        slug: 'Resource-Watch-datasets-list_25',
+                        type: null,
+                        subtitle: null,
+                        application: ['rw'],
+                        dataPath: 'data',
+                        attributesPath: null,
+                        connectorType: 'document',
+                        provider: 'json',
+                        userId: '1a10d7c6e0a37126611fd7a7',
+                        connectorUrl: 'http://api.resourcewatch.org/dataset',
+                        tableName: fakeTask1.message.index,
+                        status: 'saved',
+                        published: true,
+                        overwrite: false,
+                        verified: false,
+                        blockchain: {},
+                        mainDateField: null,
+                        env: 'production',
+                        geoInfo: false,
+                        protected: false,
+                        legend: {
+                            nested: [],
+                            country: [],
+                            region: [],
+                            date: [],
+                            integer: [],
+                            short: [],
+                            byte: [],
+                            double: [],
+                            float: [],
+                            half_float: [],
+                            scaled_float: [],
+                            boolean: [],
+                            binary: [],
+                            string: [],
+                            text: [],
+                            keyword: []
+                        },
+                        clonedHost: {},
+                        errorMessage: '',
+                        taskId: '/v1/doc-importer/task/4e451d0e-a464-448f-9dc3-68cc493f0193',
+                        updatedAt: '2019-03-30T06:15:26.762Z',
+                        dataLastUpdated: null,
+                        widgetRelevantProps: [],
+                        layerRelevantProps: []
+                    }
+                }
+            });
+
+        nock(process.env.CT_URL)
+            .patch(`/v1/dataset/${fakeTask1.datasetId}`, {
+                status: 0
+            })
+            .reply(200);
+
+        const preStatusQueueStatus = await channel.assertQueue(config.get('queues.status'));
+        preStatusQueueStatus.messageCount.should.equal(0);
+        const emptyTaskList = await Task.find({}).exec();
+        emptyTaskList.should.be.an('array').and.have.lengthOf(1);
+
+        await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
+
+        // Give the code some time to do its thing
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        let expectedExecutorQueueMessageCount = 1;
+
+        const validateExecutorQueueMessages = resolve => async (msg) => {
+            const content = JSON.parse(msg.content.toString());
+            try {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_REINDEX) {
+                    content.should.have.property('id');
+                    content.should.have.property('taskId').and.equal(message.taskId);
+                    content.should.have.property('sourceIndex').and.equal(fakeTask1.message.index);
+                    content.should.have.property('targetIndex').and.equal(message.index);
+                } else {
+                    throw new Error(`Unexpected message type: ${content.type}`);
+                }
+            } catch (err) {
+                throw err;
+            }
+            await channel.ack(msg);
+
+            expectedExecutorQueueMessageCount -= 1;
+
+            if (expectedExecutorQueueMessageCount < 0) {
+                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
+            }
+
+            if (expectedExecutorQueueMessageCount === 0) {
+                resolve();
+            }
+        };
+
+        const createdTasks = await Task.find({}).exec();
+
+        createdTasks.should.be.an('array').and.have.lengthOf(1);
+        const createdTask = createdTasks[0];
+        createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INDEX_CREATED);
+        createdTask.should.have.property('reads').and.equal(0);
+        createdTask.should.have.property('writes').and.equal(0);
+        createdTask.should.have.property('filesProcessed').and.equal(0);
+        createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
+        createdTask.should.have.property('_id').and.equal(fakeTask1.id);
+        createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_REINDEX);
         createdTask.should.have.property('message').and.be.an('object');
         createdTask.should.have.property('datasetId').and.equal(fakeTask1.datasetId);
         createdTask.should.have.property('createdAt').and.be.a('date');

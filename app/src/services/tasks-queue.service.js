@@ -31,6 +31,9 @@ class TasksQueueService extends QueueService {
             case task.MESSAGE_TYPES.TASK_APPEND:
                 executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_APPEND, this.taskMsg);
                 break;
+            case task.MESSAGE_TYPES.TASK_REINDEX:
+                executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_CREATE_INDEX, this.taskMsg);
+                break;
             case task.MESSAGE_TYPES.TASK_DELETE:
                 executorTaskMessage = execution.createMessage(execution.MESSAGE_TYPES.EXECUTION_DELETE, this.taskMsg);
                 break;
