@@ -1,0 +1,20 @@
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: doc-orchestrator
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1beta1
+    kind: Deployment
+    name: doc-orchestrator
+  minReplicas: 1
+  maxReplicas: 15
+  metrics:
+    - type: External
+      external:
+        metricName: "custom.googleapis.com|rabbitmq_queue_messages_ready"
+        metricSelector:
+          matchLabels:
+            metric.labels.queue: DOC-STATUS
+        targetAverageValue: 10
