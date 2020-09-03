@@ -14,7 +14,7 @@ services:
       CT_URL: http://127.0.0.1:9000
       API_VERSION: v1
       CT_REGISTER_MODE: auto
-      ELASTIC_URL: 127.0.0.1:9000
+      ELASTIC_URL: http://127.0.0.1:9000
     command: test
     depends_on:
       - mongo
