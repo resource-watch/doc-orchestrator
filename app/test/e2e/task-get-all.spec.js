@@ -1,5 +1,6 @@
 const nock = require('nock');
 const chai = require('chai');
+const config = require('config');
 const Task = require('models/task.model');
 const appConstants = require('app.constants');
 const { task } = require('rw-doc-importer-messages');
@@ -679,7 +680,7 @@ describe('Task get all tests', () => {
             }];
         await fakeTask4.save();
 
-        nock(process.env.ELASTIC_URL)
+        nock(config.get('elasticsearch.host'))
             .get(`/_tasks/${encodeURIComponent(fakeTask4.logs[0].elasticTaskId)}`)
             .reply(200, elasticTaskResponseObject);
 

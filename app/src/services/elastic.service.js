@@ -2,20 +2,31 @@ const logger = require('logger');
 const config = require('config');
 const { Client } = require('@elastic/elasticsearch');
 
-const elasticUrl = config.get('elastic.url');
+const elasticUrl = config.get('elasticsearch.host');
 
 class ElasticService {
 
     constructor() {
-        this.client = new Client({
-            node: elasticUrl
-        });
+        const elasticSearchConfig = {
+            node: elasticUrl,
+            log: 'info',
+            apiVersion: 'sql'
+        };
+
+        if (config.get('elasticsearch.user') && config.get('elasticsearch.password')) {
+            elasticSearchConfig.auth = {
+                username: config.get('elasticsearch.user'),
+                password: config.get('elasticsearch.password')
+            };
+        }
+
+        this.client = new Client(elasticSearchConfig);
 
         logger.debug(`Pinging Elasticsearch server at ${elasticUrl}`);
         this.client.ping({
         }, (error) => {
             if (error) {
-                logger.error('Elasticsearch cluster is down!');
+                logger.error(`Elasticsearch cluster is down! - ${error.message}`);
                 process.exit(1);
             }
         });

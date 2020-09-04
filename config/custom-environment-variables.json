@@ -10,8 +10,10 @@
     "port": "MONGO_PORT_27017_TCP_PORT",
     "database": "MONGO_DATABASE"
   },
-  "elastic": {
-    "url": "ELASTIC_URL"
+  "elasticsearch": {
+    "host": "ELASTIC_URL",
+    "user": "ELASTIC_USER",
+    "password": "ELASTIC_PASSWORD"
   },
   "logger": {
     "level": "LOGGER_LEVEL"
