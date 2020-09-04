@@ -7,6 +7,8 @@ const elasticUrl = config.get('elasticsearch.host');
 class ElasticService {
 
     constructor() {
+        logger.info(`Connecting to Elasticsearch at ${elasticUrl}`);
+
         const elasticSearchConfig = {
             node: elasticUrl
         };
