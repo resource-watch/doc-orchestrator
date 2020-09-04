@@ -8,9 +8,7 @@ class ElasticService {
 
     constructor() {
         const elasticSearchConfig = {
-            node: elasticUrl,
-            log: 'info',
-            apiVersion: 'sql'
+            node: elasticUrl
         };
 
         if (config.get('elasticsearch.user') && config.get('elasticsearch.password')) {
