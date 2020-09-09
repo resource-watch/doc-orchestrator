@@ -18,43 +18,73 @@ class StatusQueueService extends QueueService {
         this.currentTask = {};
     }
 
-    async sendExecutionTask(type, props) {
-        const contentMsg = {
+    async sendExecutionTask(type, taskProps, props = {}) {
+        let contentMsg = {
             taskId: this.currentTask._id
         };
         this.currentTask = await TaskService.get(this.statusMsg.taskId);
-        props.forEach((prop) => {
+        taskProps.forEach((prop) => {
             const field = Object.keys(prop)[0];
             contentMsg[field] = get(this.currentTask, prop[field]);
         });
+
+        contentMsg = {
+            ...contentMsg,
+            ...props
+        };
+
         const message = execution.createMessage(type, contentMsg);
         await ExecutorTaskQueueService.sendMessage(message);
     }
 
     async indexCreated() {
-        if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CREATE && (this.currentTask.index) && (this.currentTask.index !== this.statusMsg.index)) {
-            await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
-            await TaskService.resetCounters(this.currentTask._id);
+        const dataset = await DatasetService.get(this.currentTask.datasetId);
+        const { connectorUrl, sources } = dataset.data.attributes;
+
+        const datasetProps = {
+            status: DATASET_STATUS.PENDING
+        };
+
+        switch (this.currentTask.type) {
+
+            case task.MESSAGE_TYPES.TASK_CREATE:
+                datasetProps.tableName = this.statusMsg.index;
+                datasetProps.sources = this.currentTask.message.fileUrl;
+
+                break;
+            case task.MESSAGE_TYPES.TASK_OVERWRITE:
+                if (this.currentTask.index && (this.currentTask.index !== this.statusMsg.index)) {
+                    await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+                    await TaskService.resetCounters(this.currentTask._id);
+                }
+
+                datasetProps.tableName = this.statusMsg.index;
+                datasetProps.sources = this.currentTask.message.fileUrl;
+
+                break;
+            case task.MESSAGE_TYPES.TASK_CONCAT:
+                if (this.currentTask.index && (this.currentTask.index !== this.statusMsg.index)) {
+                    await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'index' }]);
+                    await TaskService.resetCounters(this.currentTask._id);
+                }
+
+                datasetProps.sources = uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)));
+
+                break;
+            case task.MESSAGE_TYPES.TASK_REINDEX:
+                await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_REINDEX, [{ sourceIndex: 'message.index' }], { targetIndex: this.statusMsg.index });
+
+                break;
+
+            default:
+                break;
+
         }
+
         await TaskService.update(this.currentTask._id, {
             status: TASK_STATUS.INDEX_CREATED,
             index: this.statusMsg.index
         });
-
-        const dataset = await DatasetService.get(this.currentTask.datasetId);
-        const { connectorUrl, sources } = dataset.data.attributes;
-
-        // update the dataset
-        const datasetProps = {
-            status: DATASET_STATUS.PENDING
-        };
-        if (this.currentTask.type !== task.MESSAGE_TYPES.TASK_CONCAT) {
-            datasetProps.tableName = this.statusMsg.index;
-            datasetProps.sources = this.currentTask.message.fileUrl;
-        } else {
-            datasetProps.sources = uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)));
-
-        }
 
         await DatasetService.update(this.currentTask.datasetId, datasetProps);
     }

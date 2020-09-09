@@ -19,7 +19,7 @@ let channel;
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
-describe('TASK_CREATE handling process', () => {
+describe('TASK_REINDEX handling process', () => {
 
     before(async () => {
         if (process.env.NODE_ENV !== 'test') {
@@ -65,20 +65,24 @@ describe('TASK_CREATE handling process', () => {
         await Task.deleteMany({}).exec();
     });
 
-    it('Consume a TASK_CREATE message and create a new task and EXECUTION_CREATE message (happy case)', async () => {
+    it('Consume a TASK_REINDEX message and create a new task and a EXECUTION_CREATE_INDEX message (happy case)', async () => {
         const timestamp = new Date().getTime();
 
         const message = {
-            id: 'ffe306e0-519f-478b-8a79-7a3123c0c8b9',
-            type: task.MESSAGE_TYPES.TASK_CREATE,
+            id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
+            type: 'TASK_REINDEX',
             datasetId: timestamp,
-            fileUrl: ['https://wri-01.carto.com/tables/wdpa_protected_areas/table.csv'],
-            provider: 'csv'
+            provider: 'json',
+            index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
+            legend: {}
         };
 
-        nock(`${process.env.CT_URL}`)
-            .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
-            .once()
+        nock(process.env.CT_URL)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0,
+                errorMessage: ''
+            })
             .reply(200);
 
         const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
@@ -96,12 +100,12 @@ describe('TASK_CREATE handling process', () => {
         const validateExecutorQueueMessages = resolve => async (msg) => {
             const content = JSON.parse(msg.content.toString());
             try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CREATE) {
+                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CREATE_INDEX) {
                     content.should.have.property('datasetId').and.equal(timestamp);
                     content.should.have.property('id');
-                    content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
-                    content.should.have.property('provider').and.equal('csv');
+                    content.should.have.property('provider').and.equal('json');
                     content.should.have.property('taskId').and.equal(message.id);
+                    content.should.have.property('index').and.match(new RegExp(`index_(\\w*)_(\\w*)`));
                 } else {
                     throw new Error(`Unexpected message type: ${content.type}`);
                 }
@@ -120,9 +124,10 @@ describe('TASK_CREATE handling process', () => {
             createdTask.should.have.property('filesProcessed').and.equal(0);
             createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
             createdTask.should.have.property('_id').and.equal(message.id);
-            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
+            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_REINDEX);
             createdTask.should.have.property('message').and.be.an('object');
             createdTask.should.have.property('datasetId').and.equal(`${timestamp}`);
+            createdTask.message.should.have.property('index').and.equal(content.index);
             createdTask.should.have.property('createdAt').and.be.a('date');
             createdTask.should.have.property('updatedAt').and.be.a('date');
 
@@ -136,32 +141,40 @@ describe('TASK_CREATE handling process', () => {
                 resolve();
             }
         };
-
 
         return new Promise((resolve) => {
             channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve), { exclusive: true });
         });
     });
 
-    it('Consume a TASK_CREATE message with multiple files and create a new task and EXECUTION_CREATE message with multiple files (happy case for multiple files)', async () => {
+    it('Consume a TASK_REINDEX message while not being able to reach the dataset microservice (500) should retry 10 times and ot create a task nor issue additional messages', async () => {
         const timestamp = new Date().getTime();
 
         const message = {
-            id: 'ffe306e0-519f-478b-8a79-7a3123c0c8b9',
-            type: task.MESSAGE_TYPES.TASK_CREATE,
+            id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
+            type: 'TASK_REINDEX',
             datasetId: timestamp,
-            fileUrl: [
-                'https://fake-file-0.json',
-                'https://fake-file-1.json',
-                'https://fake-file-2.json'
-            ],
-            provider: 'csv'
+            provider: 'json',
+            index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
+            legend: {}
         };
 
         nock(`${process.env.CT_URL}`)
-            .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
-            .once()
-            .reply(200);
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0,
+                errorMessage: ''
+            })
+            .times(11)
+            .reply(500, { error: 'dataset microservice unavailable' });
+
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: '',
+                status: 0
+            })
+            .times(11)
+            .reply(200, {});
 
         const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
         preDocsQueueStatus.messageCount.should.equal(0);
@@ -170,57 +183,68 @@ describe('TASK_CREATE handling process', () => {
         const emptyTaskList = await Task.find({}).exec();
         emptyTaskList.should.be.an('array').and.have.lengthOf(0);
 
+
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
-        let expectedExecutorQueueMessageCount = 1;
+        // Give the code a few seconds to do its thing
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
-            const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CREATE) {
-                    content.should.have.property('datasetId').and.equal(timestamp);
-                    content.should.have.property('id');
-                    content.should.have.property('fileUrl').and.be.an('array').and.eql(message.fileUrl);
-                    content.should.have.property('provider').and.equal('csv');
-                    content.should.have.property('taskId').and.equal(message.id);
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
-            }
-            await channel.ack(msg);
+        const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        postQueueStatus.messageCount.should.equal(0);
 
-            const createdTasks = await Task.find({}).exec();
+        const createdTasks = await Task.find({}).exec();
 
-            createdTasks.should.be.an('array').and.have.lengthOf(1);
-            const createdTask = createdTasks[0];
-            createdTask.should.have.property('status').and.equal(appConstants.TASK_STATUS.INIT);
-            createdTask.should.have.property('reads').and.equal(0);
-            createdTask.should.have.property('writes').and.equal(0);
-            createdTask.should.have.property('filesProcessed').and.equal(0);
-            createdTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
-            createdTask.should.have.property('_id').and.equal(message.id);
-            createdTask.should.have.property('type').and.equal(task.MESSAGE_TYPES.TASK_CREATE);
-            createdTask.should.have.property('message').and.be.an('object');
-            createdTask.should.have.property('datasetId').and.equal(`${timestamp}`);
-            createdTask.should.have.property('createdAt').and.be.a('date');
-            createdTask.should.have.property('updatedAt').and.be.a('date');
+        createdTasks.should.be.an('array').and.have.lengthOf(0);
+    });
 
-            expectedExecutorQueueMessageCount -= 1;
+    it('Consume a TASK_REINDEX message while not being able to reach the dataset microservice (404) should retry 10 times and ot create a task nor issue additional messages', async () => {
+        const timestamp = new Date().getTime();
 
-            if (expectedExecutorQueueMessageCount < 0) {
-                throw new Error(`Unexpected message count - expectedExecutorQueueMessageCount:${expectedExecutorQueueMessageCount}`);
-            }
-
-            if (expectedExecutorQueueMessageCount === 0) {
-                resolve();
-            }
+        const message = {
+            id: 'f6dfd42f-cf6c-41ae-bf66-dfe08025087e',
+            type: 'TASK_REINDEX',
+            datasetId: timestamp,
+            provider: 'json',
+            index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846',
+            legend: {}
         };
 
-        return new Promise((resolve) => {
-            channel.consume(config.get('queues.executorTasks'), validateExecutorQueueMessages(resolve), { exclusive: true });
-        });
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: `/v1/doc-importer/task/${message.id}`,
+                status: 0,
+                errorMessage: ''
+            })
+            .times(11)
+            .reply(404, { error: 'dataset not found' });
+
+        nock(`${process.env.CT_URL}`)
+            .patch(`/v1/dataset/${timestamp}`, {
+                taskId: '',
+                status: 0
+            })
+            .times(11)
+            .reply(200, {});
+
+        const preDocsQueueStatus = await channel.assertQueue(config.get('queues.tasks'));
+        preDocsQueueStatus.messageCount.should.equal(0);
+        const preQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        preQueueStatus.messageCount.should.equal(0);
+        const emptyTaskList = await Task.find({}).exec();
+        emptyTaskList.should.be.an('array').and.have.lengthOf(0);
+
+
+        await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
+
+        // Give the code a few seconds to do its thing
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
+        postQueueStatus.messageCount.should.equal(0);
+
+        const createdTasks = await Task.find({}).exec();
+
+        createdTasks.should.be.an('array').and.have.lengthOf(0);
     });
 
     afterEach(async () => {
@@ -251,6 +275,7 @@ describe('TASK_CREATE handling process', () => {
     });
 
     after(async () => {
+        process.removeListener('unhandledRejection', should.fail);
         rabbitmqConnection.close();
     });
 });

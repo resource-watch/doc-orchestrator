@@ -1,14 +1,26 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: null
   labels:
-    name: doc-orchestrator
     app: rw
+    name: doc-orchestrator
   name: doc-orchestrator
 spec:
+  progressDeadlineSeconds: 2147483647
+  replicas: 1
   revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      name: doc-orchestrator
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
   template:
     metadata:
+      creationTimestamp: null
       labels:
         name: doc-orchestrator
     spec:
@@ -16,87 +28,106 @@ spec:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
-              - matchExpressions:
-                  - key: type
-                    operator: In
-                    values:
-                      - apps
+            - matchExpressions:
+              - key: type
+                operator: In
+                values:
+                - apps
       containers:
-      - name: doc-orchestrator
+      - args:
+        - start
+        env:
+        - name: PORT
+          value: "5000"
+        - name: NODE_ENV
+          value: prod
+        - name: NODE_PATH
+          value: app/src
+        - name: LOCAL_URL
+          value: http://doc-orchestrator.default.svc.cluster.local:5000
+        - name: CT_URL
+          valueFrom:
+            secretKeyRef:
+              key: CT_URL
+              name: mssecrets
+        - name: CT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: CT_TOKEN
+              name: mssecrets
+        - name: CT_REGISTER_MODE
+          valueFrom:
+            secretKeyRef:
+              key: CT_REGISTER_MODE
+              name: mssecrets
+        - name: API_VERSION
+          valueFrom:
+            secretKeyRef:
+              key: API_VERSION
+              name: mssecrets
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              key: RABBITMQ_URI
+              name: dbsecrets
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              key: DOC_ORCHESTRATOR_MONGO_URI
+              name: dbsecrets
+        - name: ELASTIC_URL
+          valueFrom:
+            secretKeyRef:
+              key: ELASTIC_URL
+              name: dbsecrets
+        - name: ELASTIC_USER
+          valueFrom:
+            secretKeyRef:
+              key: ELASTIC_USER
+              name: dbsecrets
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: ELASTIC_PASSWORD
+              name: dbsecrets
         image: vizzuality/doc-orchestrator
         imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: doc-orchestrator
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 5
         resources:
-          requests:
-            cpu: "0.25"
-            memory: "256M"
           limits:
             cpu: "1"
-            memory: "512M"
-        args:
-          - start
-        env:
-          - name: PORT
-            value: "5000"
-          - name: NODE_ENV
-            value: prod
-          - name: NODE_PATH
-            value: app/src
-          - name: LOCAL_URL
-            value: http://doc-orchestrator.default.svc.cluster.local:5000
-          - name: CT_URL
-            valueFrom:
-                secretKeyRef:
-                  name: mssecrets
-                  key: CT_URL
-          - name: CT_TOKEN
-            valueFrom:
-                secretKeyRef:
-                  name: mssecrets
-                  key: CT_TOKEN
-          - name: CT_REGISTER_MODE
-            valueFrom:
-                secretKeyRef:
-                  name: mssecrets
-                  key: CT_REGISTER_MODE
-          - name: API_VERSION
-            valueFrom:
-                secretKeyRef:
-                  name: mssecrets
-                  key: API_VERSION
-          - name: RABBITMQ_URL
-            valueFrom:
-                secretKeyRef:
-                  name: dbsecrets
-                  key: RABBITMQ_URI
-          - name: MONGO_URI
-            valueFrom:
-                secretKeyRef:
-                  name: dbsecrets
-                  key: DOC_ORCHESTRATOR_MONGO_URI
-          - name: ELASTIC_URL
-            valueFrom:
-                secretKeyRef:
-                  name: dbsecrets
-                  key: ELASTIC_URI
-
-        ports:
-          - containerPort: 5000
-        readinessProbe:
-          httpGet:
-            scheme: HTTP
-            path: /healthcheck
-            port: 5000
-          initialDelaySeconds: 30
-          timeoutSeconds: 5
-          periodSeconds: 15
-        livenessProbe:
-          httpGet:
-            scheme: HTTP
-            path: /healthcheck
-            port: 5000
-          failureThreshold: 3
-          initialDelaySeconds: 30
-          timeoutSeconds: 5
-          periodSeconds: 15
-
+            memory: 512M
+          requests:
+            cpu: 250m
+            memory: 256M
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
       restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status: {}

@@ -8,6 +8,11 @@
   "service": {
     "name": "Doc Importer Orchestrator"
   },
+  "elasticsearch": {
+    "host": "localhost",
+    "user": null,
+    "password": null
+  },
   "queues": {
     "tasks": "DOC-TASKS",
     "status": "DOC-STATUS",

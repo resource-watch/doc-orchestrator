@@ -1,6 +1,6 @@
 {
   "name": "doc-orchestrator",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -40,7 +40,7 @@
     "nodemon": "^1.19.3"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^5.6.18",
+    "@elastic/elasticsearch": "^6.8.8",
     "amqplib": "0.5.2",
     "bluebird": "^3.4.7",
     "bunyan": "1.8.12",
@@ -57,7 +57,7 @@
     "mongoose-paginate": "^5.0.3",
     "request": "2.88.0",
     "request-promise": "4.2.2",
-    "rw-doc-importer-messages": "1.4.1",
+    "rw-doc-importer-messages": "1.5.0",
     "sleep": "^6.1.0",
     "uuid": "3.3.2"
   },
