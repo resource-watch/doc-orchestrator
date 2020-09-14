@@ -40,7 +40,7 @@
     "nodemon": "^1.19.3"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^6.8.8",
+    "@elastic/elasticsearch": "^7.9.0",
     "amqplib": "0.5.2",
     "bluebird": "^3.4.7",
     "bunyan": "1.8.12",
