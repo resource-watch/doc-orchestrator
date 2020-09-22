@@ -1,3 +1,7 @@
+## 22/09/2020
+
+- Sort task list by date created
+
 ## 04/09/2020
 
 - Add username and password support for Elasticsearch connection

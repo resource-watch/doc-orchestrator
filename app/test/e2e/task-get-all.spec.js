@@ -36,7 +36,7 @@ describe('Task get all tests', () => {
         response.body.should.have.property('data').and.be.an('array').and.have.length(0);
     });
 
-    it('Get a list of existent tasks should return 200 with the existing tasks', async () => {
+    it('Get a list of existent tasks should return 200 with the existing tasks sorted by creation date', async () => {
         const fakeTask1 = await new Task(createTask({
             status: appConstants.TASK_STATUS.ERROR,
             type: task.MESSAGE_TYPES.TASK_CREATE,
@@ -62,8 +62,8 @@ describe('Task get all tests', () => {
 
         const responseTasks = deserializeTask(response);
 
-        validateTask(responseTasks[0], fakeTask1);
-        validateTask(responseTasks[1], fakeTask2);
+        validateTask(responseTasks[0], fakeTask2);
+        validateTask(responseTasks[1], fakeTask1);
         validateTask(responseTasks[2], fakeTask3);
     });
 
@@ -692,9 +692,8 @@ describe('Task get all tests', () => {
         response.body.should.have.property('data').and.be.an('array').and.have.length(4);
 
         const responseTasks = deserializeTask(response);
-        const task1 = responseTasks[3];
+        const task1 = responseTasks.find(e => e.datasetId === fakeTask4.datasetId);
 
-        task1.should.have.property('datasetId').and.equal(fakeTask4.datasetId);
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);
