@@ -53,9 +53,13 @@ const createTask = (additionalData) => {
     };
 };
 
-const validateTask = (responseTask, expectedTask) => {
+const validateTask = (responseTask, expectedTask, skipLogs = false) => {
     responseTask.should.have.property('datasetId').and.equal(expectedTask.datasetId);
-    responseTask.should.have.property('logs').and.be.an('array').and.have.lengthOf(0);
+    if (!skipLogs) {
+        responseTask.should.have.property('logs').and.be.an('array').and.deep.equal(expectedTask.logs);
+    } else {
+        responseTask.should.not.have.property('logs');
+    }
     responseTask.should.have.property('reads').and.equal(0);
     responseTask.should.have.property('writes').and.equal(0);
     responseTask.should.have.property('message').and.be.an('object');
