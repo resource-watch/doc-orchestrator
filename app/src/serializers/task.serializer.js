@@ -1,8 +1,8 @@
 
 class TaskSerializer {
 
-    static serializeElement(el) {
-        return {
+    static serializeElement(el, skipLogs) {
+        const serializedElement = {
             id: el._id,
             type: 'task',
             attributes: {
@@ -21,9 +21,15 @@ class TaskSerializer {
                 error: el.error
             }
         };
+
+        if (skipLogs) {
+            delete serializedElement.attributes.logs;
+        }
+
+        return serializedElement;
     }
 
-    static serialize(data, link = null) {
+    static serialize(data, link = null, skipLogs = false) {
         const result = {};
         if (data && Array.isArray(data) && data.length === 0) {
             result.data = [];
@@ -34,11 +40,11 @@ class TaskSerializer {
                 while (data.docs.indexOf(undefined) >= 0) {
                     data.docs.splice(data.docs.indexOf(undefined), 1);
                 }
-                result.data = data.docs.map(el => TaskSerializer.serializeElement(el));
+                result.data = data.docs.map(el => TaskSerializer.serializeElement(el, skipLogs));
             } else if (Array.isArray(data)) {
-                result.data = data.map(e => TaskSerializer.serializeElement(e));
+                result.data = data.map(e => TaskSerializer.serializeElement(e, skipLogs));
             } else {
-                result.data = TaskSerializer.serializeElement(data);
+                result.data = TaskSerializer.serializeElement(data, skipLogs);
             }
         }
         if (link) {
