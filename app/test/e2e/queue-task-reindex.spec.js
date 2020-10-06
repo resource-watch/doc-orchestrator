@@ -159,7 +159,7 @@ describe('TASK_REINDEX handling process', () => {
             legend: {}
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
                 status: 0,
@@ -168,7 +168,7 @@ describe('TASK_REINDEX handling process', () => {
             .times(11)
             .reply(500, { error: 'dataset microservice unavailable' });
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: '',
                 status: 0
@@ -209,7 +209,7 @@ describe('TASK_REINDEX handling process', () => {
             legend: {}
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
                 status: 0,
@@ -218,7 +218,7 @@ describe('TASK_REINDEX handling process', () => {
             .times(11)
             .reply(404, { error: 'dataset not found' });
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: '',
                 status: 0

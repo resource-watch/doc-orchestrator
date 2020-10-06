@@ -166,7 +166,7 @@ describe('TASK_CONCAT handling process', () => {
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846'
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
                 status: 0,
@@ -175,7 +175,7 @@ describe('TASK_CONCAT handling process', () => {
             .times(11)
             .reply(500, { error: 'dataset microservice unavailable' });
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: '',
                 status: 0
@@ -216,7 +216,7 @@ describe('TASK_CONCAT handling process', () => {
             index: 'index_19f49246250d40d3a85b1da95c1b69e5_1551684629846'
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: `/v1/doc-importer/task/${message.id}`,
                 status: 0,
@@ -225,7 +225,7 @@ describe('TASK_CONCAT handling process', () => {
             .times(11)
             .reply(404, { error: 'dataset not found' });
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, {
                 taskId: '',
                 status: 0

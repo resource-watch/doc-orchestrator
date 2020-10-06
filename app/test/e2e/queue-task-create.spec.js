@@ -76,7 +76,7 @@ describe('TASK_CREATE handling process', () => {
             provider: 'csv'
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
             .once()
             .reply(200);
@@ -158,7 +158,7 @@ describe('TASK_CREATE handling process', () => {
             provider: 'csv'
         };
 
-        nock(`${process.env.CT_URL}`)
+        nock(process.env.CT_URL)
             .patch(`/v1/dataset/${timestamp}`, body => body.taskId === `/v1/doc-importer/task/${message.id}` && body.status === 0)
             .once()
             .reply(200);
