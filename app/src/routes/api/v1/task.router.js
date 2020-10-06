@@ -60,7 +60,7 @@ class TaskRouter {
             const apiVersion = ctx.mountPath.split('/')[ctx.mountPath.split('/').length - 1];
             const link = `${ctx.request.protocol}://${ctx.request.host}/${apiVersion}${ctx.request.path}${serializedQuery}`;
 
-            ctx.body = TaskSerializer.serialize(tasks, link);
+            ctx.body = TaskSerializer.serialize(tasks, link, query.skipLogs === 'true');
         } catch (err) {
             if (err instanceof TaskNotFound) {
                 ctx.throw(404, err.message);

@@ -36,21 +36,30 @@ describe('Task get all tests', () => {
         response.body.should.have.property('data').and.be.an('array').and.have.length(0);
     });
 
-    it('Get a list of existent tasks should return 200 with the existing tasks', async () => {
+    it('Get a list of existent tasks should return 200 with the existing tasks sorted by creation date', async () => {
         const fakeTask1 = await new Task(createTask({
             status: appConstants.TASK_STATUS.ERROR,
             type: task.MESSAGE_TYPES.TASK_CREATE,
-            createdAt: new Date('2019-02-01')
+            createdAt: new Date('2019-02-01'),
+            logs: [
+                { foo: 'bar' }
+            ]
         })).save();
         const fakeTask2 = await new Task(createTask({
             status: appConstants.TASK_STATUS.SAVED,
             type: task.MESSAGE_TYPES.TASK_CREATE,
-            createdAt: new Date('2019-01-01')
+            createdAt: new Date('2019-01-01'),
+            logs: [
+                { foo: 'bar' }
+            ]
         })).save();
         const fakeTask3 = await new Task(createTask({
             status: appConstants.TASK_STATUS.SAVED,
             type: task.MESSAGE_TYPES.TASK_OVERWRITE,
-            createdAt: new Date('2019-03-01')
+            createdAt: new Date('2019-03-01'),
+            logs: [
+                { foo: 'bar' }
+            ]
         })).save();
 
         const response = await requester
@@ -62,9 +71,59 @@ describe('Task get all tests', () => {
 
         const responseTasks = deserializeTask(response);
 
-        validateTask(responseTasks[0], fakeTask1);
-        validateTask(responseTasks[1], fakeTask2);
+        validateTask(responseTasks[0], fakeTask2);
+        validateTask(responseTasks[1], fakeTask1);
         validateTask(responseTasks[2], fakeTask3);
+    });
+
+    it('Get a list of existent tasks with skipLogs=true should return 200 with the existing tasks without the log entries', async () => {
+        const fakeTask1 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.ERROR,
+            type: task.MESSAGE_TYPES.TASK_CREATE,
+            createdAt: new Date('2019-02-01'),
+            logs: [
+                { foo: 'bar' }
+            ]
+        })).save();
+        const fakeTask2 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_CREATE,
+            createdAt: new Date('2019-01-01'),
+            logs: [
+                { foo: 'bar' }
+            ]
+        })).save();
+        const fakeTask3 = await new Task(createTask({
+            status: appConstants.TASK_STATUS.SAVED,
+            type: task.MESSAGE_TYPES.TASK_OVERWRITE,
+            createdAt: new Date('2019-03-01'),
+            logs: [
+                { foo: 'bar' }
+            ]
+        })).save();
+
+        const response = await requester
+            .get(`/api/v1/doc-importer/task`)
+            .query({
+                skipLogs: true
+            })
+            .send();
+
+        response.status.should.equal(200);
+        response.body.should.have.property('data').and.be.an('array').and.have.length(3);
+
+        const responseTasks = deserializeTask(response);
+
+        // eslint-disable-next-line no-underscore-dangle
+        delete fakeTask2._doc.logs;
+        // eslint-disable-next-line no-underscore-dangle
+        delete fakeTask1._doc.logs;
+        // eslint-disable-next-line no-underscore-dangle
+        delete fakeTask3._doc.logs;
+
+        validateTask(responseTasks[0], fakeTask2, true);
+        validateTask(responseTasks[1], fakeTask1, true);
+        validateTask(responseTasks[2], fakeTask3, true);
     });
 
     it('Get a list of existent tasks should return 200 with the existing tasks limited to pagination criteria, and include the pagination metadata', async () => {
@@ -692,9 +751,8 @@ describe('Task get all tests', () => {
         response.body.should.have.property('data').and.be.an('array').and.have.length(4);
 
         const responseTasks = deserializeTask(response);
-        const task1 = responseTasks[3];
+        const task1 = responseTasks.find(e => e.datasetId === fakeTask4.datasetId);
 
-        task1.should.have.property('datasetId').and.equal(fakeTask4.datasetId);
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         task1.should.have.property('reads').and.equal(0);
         task1.should.have.property('writes').and.equal(0);

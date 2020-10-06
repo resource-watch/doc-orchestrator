@@ -153,10 +153,12 @@ class TaskService {
 
         const page = query['page[number]'] ? parseInt(query['page[number]'], 10) : 1;
         const limit = query['page[size]'] ? parseInt(query['page[size]'], 10) : 10;
+        const sort = { createdAt: 'asc' };
 
         const paginationOptions = {
             page,
-            limit
+            limit,
+            sort
         };
 
         const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
