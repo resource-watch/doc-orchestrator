@@ -11,12 +11,11 @@ const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
 let channel;
-
 
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
@@ -208,22 +207,18 @@ describe('STATUS_FINISHED_REINDEX handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code some time to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
+        const validateExecutorQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
-                    content.should.have.property('id');
-                    content.should.have.property('taskId').and.equal(message.taskId);
-                    content.should.have.property('index').and.equal(fakeTask1.message.index);
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                content.should.have.property('id');
+                content.should.have.property('taskId').and.equal(message.taskId);
+                content.should.have.property('index').and.equal(fakeTask1.message.index);
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
 

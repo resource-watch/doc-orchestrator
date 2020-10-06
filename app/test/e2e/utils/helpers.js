@@ -18,7 +18,7 @@ function isObject(property) {
 
 const deserializeTask = (response) => {
     if (isArray(response.body.data)) {
-        return response.body.data.map(e => e.attributes);
+        return response.body.data.map((e) => e.attributes);
     }
     if (isObject(response.body.data)) {
         return response.body.data.attributes;

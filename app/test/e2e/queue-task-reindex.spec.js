@@ -10,7 +10,7 @@ const { task, execution } = require('rw-doc-importer-messages');
 const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
@@ -92,25 +92,20 @@ describe('TASK_REINDEX handling process', () => {
         const emptyTaskList = await Task.find({}).exec();
         emptyTaskList.should.be.an('array').and.have.lengthOf(0);
 
-
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
+        const validateExecutorQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CREATE_INDEX) {
-                    content.should.have.property('datasetId').and.equal(timestamp);
-                    content.should.have.property('id');
-                    content.should.have.property('provider').and.equal('json');
-                    content.should.have.property('taskId').and.equal(message.id);
-                    content.should.have.property('index').and.match(new RegExp(`index_(\\w*)_(\\w*)`));
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_CREATE_INDEX) {
+                content.should.have.property('datasetId').and.equal(timestamp);
+                content.should.have.property('id');
+                content.should.have.property('provider').and.equal('json');
+                content.should.have.property('taskId').and.equal(message.id);
+                content.should.have.property('index').and.match(new RegExp(`index_(\\w*)_(\\w*)`));
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
 
@@ -183,11 +178,10 @@ describe('TASK_REINDEX handling process', () => {
         const emptyTaskList = await Task.find({}).exec();
         emptyTaskList.should.be.an('array').and.have.lengthOf(0);
 
-
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
         postQueueStatus.messageCount.should.equal(0);
@@ -233,11 +227,10 @@ describe('TASK_REINDEX handling process', () => {
         const emptyTaskList = await Task.find({}).exec();
         emptyTaskList.should.be.an('array').and.have.lengthOf(0);
 
-
         await channel.sendToQueue(config.get('queues.tasks'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.executorTasks'));
         postQueueStatus.messageCount.should.equal(0);
@@ -262,7 +255,6 @@ describe('TASK_REINDEX handling process', () => {
         const tasksQueueStatus = await channel.checkQueue(config.get('queues.tasks'));
         tasksQueueStatus.messageCount.should.equal(0);
 
-
         if (!nock.isDone()) {
             const pendingMocks = nock.pendingMocks();
             if (pendingMocks.length > 1) {
@@ -275,7 +267,6 @@ describe('TASK_REINDEX handling process', () => {
     });
 
     after(async () => {
-        process.removeListener('unhandledRejection', should.fail);
         rabbitmqConnection.close();
     });
 });

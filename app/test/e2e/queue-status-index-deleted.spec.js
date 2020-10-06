@@ -11,12 +11,11 @@ const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
 let channel;
-
 
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
@@ -92,7 +91,7 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);
@@ -118,10 +117,6 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         log.should.have.property('id').and.equal(message.id);
         log.should.have.property('taskId').and.equal(message.taskId);
         log.should.have.property('type').and.equal(message.type);
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
     });
 
     it('Consume a STATUS_INDEX_DELETED message for a TASK_OVERWRITE should set the dataset status to SAVED (happy case)', async () => {
@@ -150,7 +145,7 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);
@@ -176,10 +171,6 @@ describe('STATUS_INDEX_DELETED handling process', () => {
         log.should.have.property('id').and.equal(message.id);
         log.should.have.property('taskId').and.equal(message.taskId);
         log.should.have.property('type').and.equal(message.type);
-
-        process.on('unhandledRejection', (error) => {
-            should.fail(error);
-        });
     });
 
     afterEach(async () => {

@@ -11,12 +11,11 @@ const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
 let channel;
-
 
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
@@ -124,7 +123,6 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
                 }
             });
 
-
         const message = {
             id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
             type: 'STATUS_IMPORT_CONFIRMED',
@@ -140,7 +138,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);
@@ -184,21 +182,17 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorTasksQueueMessages = resolve => async (msg) => {
+        const validateExecutorTasksQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_REINDEX) {
-                    content.should.have.property('id');
-                    content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_REINDEX);
-                    content.should.have.property('sourceIndex').and.equal(fakeTask1.message.index);
-                    content.should.have.property('targetIndex').and.equal(fakeTask1.index);
-                    content.should.have.property('taskId').and.equal(message.taskId);
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_REINDEX) {
+                content.should.have.property('id');
+                content.should.have.property('type').and.equal(execution.MESSAGE_TYPES.EXECUTION_REINDEX);
+                content.should.have.property('sourceIndex').and.equal(fakeTask1.message.index);
+                content.should.have.property('targetIndex').and.equal(fakeTask1.index);
+                content.should.have.property('taskId').and.equal(message.taskId);
 
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
             const createdTasks = await Task.find({}).exec();
@@ -245,7 +239,6 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
             taskId: fakeTask1.id,
             lastCheckedDate: '2019-03-29T08:43:08.091Z'
         };
-
 
         nock(process.env.CT_URL)
             .get(`/v1/dataset/${fakeTask1.datasetId}`)
@@ -387,7 +380,7 @@ describe('STATUS_IMPORT_CONFIRMED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);

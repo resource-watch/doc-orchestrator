@@ -1,4 +1,3 @@
-
 class TaskSerializer {
 
     static serializeElement(el, skipLogs) {
@@ -40,9 +39,9 @@ class TaskSerializer {
                 while (data.docs.indexOf(undefined) >= 0) {
                     data.docs.splice(data.docs.indexOf(undefined), 1);
                 }
-                result.data = data.docs.map(el => TaskSerializer.serializeElement(el, skipLogs));
+                result.data = data.docs.map((el) => TaskSerializer.serializeElement(el, skipLogs));
             } else if (Array.isArray(data)) {
-                result.data = data.map(e => TaskSerializer.serializeElement(e, skipLogs));
+                result.data = data.map((e) => TaskSerializer.serializeElement(e, skipLogs));
             } else {
                 result.data = TaskSerializer.serializeElement(data, skipLogs);
             }
@@ -63,7 +62,6 @@ class TaskSerializer {
         }
         return result;
     }
-
 
 }
 

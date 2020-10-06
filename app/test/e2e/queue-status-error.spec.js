@@ -17,7 +17,6 @@ let requester;
 let rabbitmqConnection = null;
 let channel;
 
-
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
 
@@ -132,7 +131,6 @@ describe('STATUS_ERROR handling process', () => {
                 }
             });
 
-
         const message = {
             id: 'e492cef7-e287-4bd8-9128-f034a3b531ef',
             type: 'STATUS_ERROR',
@@ -148,7 +146,7 @@ describe('STATUS_ERROR handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code a few seconds to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const postQueueStatus = await channel.assertQueue(config.get('queues.status'));
         postQueueStatus.messageCount.should.equal(0);
