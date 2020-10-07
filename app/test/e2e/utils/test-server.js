@@ -17,7 +17,7 @@ exports.getTestServer = async function getTestServer() {
     const elasticUri = config.get('elasticsearch.host');
 
     process.on('unhandledRejection', (error) => {
-        should.fail(error);
+        should.fail(error.stack);
     });
 
     nock(elasticUri)

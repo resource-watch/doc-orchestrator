@@ -1,3 +1,7 @@
+## 07/10/2020
+
+- Prevent dataset updates with empty `connectorUrl` and `sources`
+
 ## 22/09/2020
 
 - Sort task list by date created.
