@@ -7,12 +7,18 @@ let requester;
 
 chai.use(chaiHttp);
 
+const should = chai.should();
+
 exports.getTestServer = async function getTestServer() {
     if (requester) {
         return requester;
     }
 
     const elasticUri = config.get('elasticsearch.host');
+
+    process.on('unhandledRejection', (error) => {
+        should.fail(error.stack);
+    });
 
     nock(elasticUri)
         .head('/')

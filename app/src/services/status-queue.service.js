@@ -233,12 +233,18 @@ class StatusQueueService extends QueueService {
             status: TASK_STATUS.SAVED
         });
 
-        await DatasetService.update(this.currentTask.datasetId, {
+        const calculatedSources = uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)));
+        const datasetPayload = {
             status: DATASET_STATUS.SAVED,
-            tableName: this.currentTask.index,
-            connectorUrl: null,
-            sources: uniq(compact(concat([], connectorUrl, sources, this.currentTask.message.fileUrl)))
-        });
+            tableName: this.currentTask.index
+        };
+
+        if (calculatedSources.length > 0) {
+            datasetPayload.connectorUrl = null;
+            datasetPayload.sources = calculatedSources;
+        }
+
+        await DatasetService.update(this.currentTask.datasetId, datasetPayload);
         await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX, [{ index: 'message.index' }]);
     }
 
