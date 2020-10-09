@@ -58,7 +58,7 @@ class TasksQueueService extends QueueService {
         // check if any task is currently running for this dataset
         const runningTasks = await TaskService.getRunningTasks(this.taskMsg.datasetId);
         if (runningTasks.length > 0) {
-            const runningTaskIds = runningTasks.map(task => task.id).join(', ');
+            const runningTaskIds = runningTasks.map((runningTask) => runningTask.id).join(', ');
 
             await DatasetService.update(this.taskMsg.datasetId, {
                 status: DATASET_STATUS.SAVED,

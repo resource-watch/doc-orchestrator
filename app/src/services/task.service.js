@@ -21,7 +21,7 @@ class TaskService {
         const filteredQuery = {};
 
         logger.debug('Object.keys(query)', Object.keys(query));
-        Object.keys(query).filter(param => Object.prototype.hasOwnProperty.call(allowedSearchFields, param)).forEach((param) => {
+        Object.keys(query).filter((param) => Object.prototype.hasOwnProperty.call(allowedSearchFields, param)).forEach((param) => {
             switch (Task.schema.paths[allowedSearchFields[param]].instance) {
 
                 case 'String':
@@ -33,11 +33,11 @@ class TaskService {
                 case 'Array':
                     if (query[param].indexOf('@') >= 0) {
                         filteredQuery[param] = {
-                            $all: query[param].split('@').map(elem => elem.trim())
+                            $all: query[param].split('@').map((elem) => elem.trim())
                         };
                     } else {
                         filteredQuery[param] = {
-                            $in: query[param].split(',').map(elem => elem.trim())
+                            $in: query[param].split(',').map((elem) => elem.trim())
                         };
                     }
                     break;
@@ -70,7 +70,6 @@ class TaskService {
         return filteredQuery;
     }
 
-
     static async get(id) {
         logger.debug(`[TaskService]: Getting task with id: ${id}`);
         logger.debug(`[DBACCESS-FIND]: task.id: ${id}`);
@@ -85,7 +84,6 @@ class TaskService {
                 return Promise.resolve();
             }
             logger.debug(`[TaskRouter] Getting Elasticsearch task data for elasticsearchTaskIds: ${log.elasticTaskId}`);
-
 
             try {
                 task.logs[index].elasticTaskStatus = await elasticService.getTaskStatus(log.elasticTaskId);
@@ -161,7 +159,7 @@ class TaskService {
             sort
         };
 
-        const filteredQuery = TaskService.getFilteredQuery(Object.assign({}, query));
+        const filteredQuery = TaskService.getFilteredQuery({ ...query });
         const pages = await Task.paginate(filteredQuery, paginationOptions);
 
         await Promise.all(pages.docs.map(async (task) => {
@@ -170,7 +168,6 @@ class TaskService {
                     return Promise.resolve();
                 }
                 logger.debug(`[TaskRouter] Getting Elasticsearch task data for elasticsearchTaskIds: ${log.elasticTaskId}`);
-
 
                 try {
                     task.logs[logIndex].elasticTaskStatus = await elasticService.getTaskStatus(log.elasticTaskId);

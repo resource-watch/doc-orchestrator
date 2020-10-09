@@ -157,7 +157,7 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code some time to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         const createdTasks = await Task.find({}).exec();
 
@@ -264,22 +264,18 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code some time to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
+        const validateExecutorQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
-                    content.should.have.property('id');
-                    content.should.have.property('taskId').and.equal(message.taskId);
-                    content.should.have.property('index').and.equal(fakeTask1.index);
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                content.should.have.property('id');
+                content.should.have.property('taskId').and.equal(message.taskId);
+                content.should.have.property('index').and.equal(fakeTask1.index);
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
 
@@ -401,22 +397,18 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code some time to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
+        const validateExecutorQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
-                    content.should.have.property('id');
-                    content.should.have.property('taskId').and.equal(message.taskId);
-                    content.should.have.property('index').and.equal(fakeTask1.index);
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_DELETE_INDEX) {
+                content.should.have.property('id');
+                content.should.have.property('taskId').and.equal(message.taskId);
+                content.should.have.property('index').and.equal(fakeTask1.index);
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
 
@@ -546,23 +538,19 @@ describe('STATUS_INDEX_CREATED handling process', () => {
         await channel.sendToQueue(config.get('queues.status'), Buffer.from(JSON.stringify(message)));
 
         // Give the code some time to do its thing
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
+        const validateExecutorQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_REINDEX) {
-                    content.should.have.property('id');
-                    content.should.have.property('taskId').and.equal(message.taskId);
-                    content.should.have.property('sourceIndex').and.equal(fakeTask1.message.index);
-                    content.should.have.property('targetIndex').and.equal(message.index);
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_REINDEX) {
+                content.should.have.property('id');
+                content.should.have.property('taskId').and.equal(message.taskId);
+                content.should.have.property('sourceIndex').and.equal(fakeTask1.message.index);
+                content.should.have.property('targetIndex').and.equal(message.index);
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
 

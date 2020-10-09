@@ -114,11 +114,11 @@ class StatusQueueService extends QueueService {
 
     async readFile() {
         // The file has been read completely, just update the status
-        const task = await TaskService.get(this.currentTask._id);
+        const currentTask = await TaskService.get(this.currentTask._id);
 
         const updatedTask = await TaskService.update(this.currentTask._id, {
             status: TASK_STATUS.READ,
-            filesProcessed: task.filesProcessed += 1
+            filesProcessed: currentTask.filesProcessed += 1
         });
 
         const finished = await TaskService.checkCounter(updatedTask);
@@ -130,9 +130,9 @@ class StatusQueueService extends QueueService {
 
     async writtenData() {
         // add write +1
-        const task = await TaskService.addWrite(this.statusMsg.taskId);
+        const currentTask = await TaskService.addWrite(this.statusMsg.taskId);
         // AND NOW CHECK IF WRITES-READS == 0 and TASK_STATUS == READ
-        const finished = await TaskService.checkCounter(task);
+        const finished = await TaskService.checkCounter(currentTask);
         if (finished) {
             // Sending confirm index creation
             await this.sendExecutionTask(execution.MESSAGE_TYPES.EXECUTION_CONFIRM_IMPORT, [{ index: 'index' }]);

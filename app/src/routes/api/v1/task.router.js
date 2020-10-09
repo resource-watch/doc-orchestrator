@@ -8,16 +8,15 @@ const router = new Router({
     prefix: '/doc-importer/task',
 });
 
-const serializeObjToQuery = obj => Object.keys(obj).reduce((a, k) => {
+const serializeObjToQuery = (obj) => Object.keys(obj).reduce((a, k) => {
     a.push(`${k}=${encodeURIComponent(obj[k])}`);
     return a;
 }, []).join('&');
 
 class TaskRouter {
 
-
     static getUser(ctx) {
-        let user = Object.assign({}, ctx.request.query.loggedUser ? JSON.parse(ctx.request.query.loggedUser) : {}, ctx.request.body.loggedUser);
+        let user = { ...(ctx.request.query.loggedUser ? JSON.parse(ctx.request.query.loggedUser) : {}), ...ctx.request.body.loggedUser };
         if (ctx.request.body.fields) {
             user = Object.assign(user, JSON.parse(ctx.request.body.fields.loggedUser));
         }
@@ -51,7 +50,7 @@ class TaskRouter {
         try {
             const tasks = await TaskService.getAll(query);
 
-            const clonedQuery = Object.assign({}, query);
+            const clonedQuery = { ...query };
             delete clonedQuery['page[size]'];
             delete clonedQuery['page[number]'];
             delete clonedQuery.ids;
@@ -100,7 +99,6 @@ const authorizationMiddleware = async (ctx, next) => {
     }
     await next();
 };
-
 
 router.get('/', TaskRouter.getAll);
 router.get('/:task', TaskRouter.get);

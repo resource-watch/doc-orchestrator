@@ -11,12 +11,11 @@ const sleep = require('sleep');
 const { getTestServer } = require('./utils/test-server');
 const { createTask } = require('./utils/helpers');
 
-const should = chai.should();
+chai.should();
 
 let requester;
 let rabbitmqConnection = null;
 let channel;
-
 
 nock.disableNetConnect();
 nock.enableNetConnect(process.env.HOST_IP);
@@ -91,19 +90,15 @@ describe('STATUS_PERFORMED_DELETE_QUERY handling process', () => {
 
         let expectedExecutorQueueMessageCount = 1;
 
-        const validateExecutorQueueMessages = resolve => async (msg) => {
+        const validateExecutorQueueMessages = (resolve) => async (msg) => {
             const content = JSON.parse(msg.content.toString());
-            try {
-                if (content.type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE) {
-                    content.should.have.property('id');
-                    content.should.have.property('taskId').and.equal(message.taskId);
-                    content.should.have.property('elasticTaskId').and.equal(message.elasticTaskId);
+            if (content.type === execution.MESSAGE_TYPES.EXECUTION_CONFIRM_DELETE) {
+                content.should.have.property('id');
+                content.should.have.property('taskId').and.equal(message.taskId);
+                content.should.have.property('elasticTaskId').and.equal(message.elasticTaskId);
 
-                } else {
-                    throw new Error(`Unexpected message type: ${content.type}`);
-                }
-            } catch (err) {
-                throw err;
+            } else {
+                throw new Error(`Unexpected message type: ${content.type}`);
             }
             await channel.ack(msg);
 

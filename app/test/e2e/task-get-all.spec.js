@@ -163,7 +163,7 @@ describe('Task get all tests', () => {
         responseTwo.body.should.have.property('data').and.be.an('array').and.have.length(10);
 
         // Ensure pages contain different tasks
-        intersection(responseOne.body.data.map(task => task.id), responseTwo.body.data.map(task => task.id)).should.eql([]);
+        intersection(responseOne.body.data.map((responseTask) => responseTask.id), responseTwo.body.data.map((responseTask) => responseTask.id)).should.eql([]);
     });
 
     it('Get a list of existent tasks with a very large page size should return a 400 error code', async () => {
@@ -657,7 +657,6 @@ describe('Task get all tests', () => {
         task1.should.have.property('type').and.equal(fakeTask1.type);
     });
 
-
     it('Get a list of existent tasks should return 200 with the existing tasks, and include details loaded from elasticsearch', async () => {
         await new Task(createTask({
             status: appConstants.TASK_STATUS.ERROR,
@@ -751,7 +750,7 @@ describe('Task get all tests', () => {
         response.body.should.have.property('data').and.be.an('array').and.have.length(4);
 
         const responseTasks = deserializeTask(response);
-        const task1 = responseTasks.find(e => e.datasetId === fakeTask4.datasetId);
+        const task1 = responseTasks.find((e) => e.datasetId === fakeTask4.datasetId);
 
         task1.should.have.property('logs').and.be.an('array').and.have.lengthOf(1);
         task1.should.have.property('reads').and.equal(0);
