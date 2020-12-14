@@ -1,3 +1,7 @@
+## 14/12/2020
+
+- Replace CT integration library
+
 ## 07/10/2020
 
 - Prevent dataset updates with empty `connectorUrl` and `sources`
