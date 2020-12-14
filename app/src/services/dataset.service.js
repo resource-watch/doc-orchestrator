@@ -1,5 +1,5 @@
 const logger = require('logger');
-const ctRegisterMicroservice = require('ct-register-microservice-node');
+const { RWAPIMicroservice } = require('rw-api-microservice-node');
 const { DATASET_STATUS } = require('app.constants');
 
 class DatasetService {
@@ -15,7 +15,7 @@ class DatasetService {
         logger.debug(`Updating dataset: ${JSON.stringify(dataset)}`);
 
         try {
-            return await ctRegisterMicroservice.requestToMicroservice({
+            return await RWAPIMicroservice.requestToMicroservice({
                 uri: `/dataset/${id}`,
                 method: 'PATCH',
                 json: true,
@@ -31,7 +31,7 @@ class DatasetService {
         logger.debug(`Getting dataset with id: ${id}`);
 
         try {
-            return await ctRegisterMicroservice.requestToMicroservice({
+            return await RWAPIMicroservice.requestToMicroservice({
                 uri: `/dataset/${id}`,
                 method: 'GET',
                 json: true
