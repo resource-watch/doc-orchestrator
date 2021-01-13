@@ -17,6 +17,7 @@ services:
       ELASTIC_URL: http://127.0.0.1:9000
       CT_TOKEN: cttoken
       LOCAL_URL: http://doc-orchestrator.default.svc.cluster.local:5000
+      FASTLY_ENABLED: "false"
     command: test
     depends_on:
       - mongo
