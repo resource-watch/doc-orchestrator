@@ -488,10 +488,10 @@ axe-core@^3.5.4:
   resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-3.5.5.tgz#84315073b53fa3c0c51676c588d59da09a192227"
   integrity sha512-5P0QZ6J5xGikH780pghEdbEKijCTrruK9KxtPZCFWUpef0f6GipO+xEZ5GKCb020mmqgbiNO6TcA55CriL784Q==
 
-axios@^0.21.0:
-  version "0.21.0"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.21.0.tgz#26df088803a2350dff2c27f96fef99fe49442aca"
-  integrity sha512-fmkJBknJKoZwem3/IKSSLpkdNXZeBu5Q7GA/aRsr2btgrptmSCxi2oFjZHqGdK9DoTil9PIHlPIZw2EcRJXRvw==
+axios@0.21.1, axios@^0.21.1:
+  version "0.21.1"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.21.1.tgz#22563481962f4d6bde9a76d516ef0e5d3c09b2b8"
+  integrity sha512-dKQiRHxGD9PPRIUNIWvZhPTPpl1rf/OxTYKsqKUDjBwYylTvV7SjSHJb9ratfyzM6wCdLCOYLzs73qpg5c4iGA==
   dependencies:
     follow-redirects "^1.10.0"
 
@@ -1707,6 +1707,12 @@ fast-levenshtein@^2.0.6:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz#3d8a5c66883a16a30ca8643e851f19baa7797917"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
+
+"fastly-promises@github:tiagojsag/fastly-promises#master":
+  version "0.0.0-semantically-released"
+  resolved "https://codeload.github.com/tiagojsag/fastly-promises/tar.gz/14470364f0d4e62b8ff99c8f7e7dd7cb27039242"
+  dependencies:
+    axios "0.21.1"
 
 figures@^3.2.0:
   version "3.2.0"
@@ -4537,12 +4543,13 @@ rimraf@~3.0.2:
   dependencies:
     glob "^7.1.3"
 
-rw-api-microservice-node@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/rw-api-microservice-node/-/rw-api-microservice-node-2.0.4.tgz#2fd1b3df116988cec2e5d3cc12fe579b11527265"
-  integrity sha512-xx2vXqpp44Kc00DW0zEGwnCSj68d4p4MRUM8ZqybSqa7e3USWwQQ2pWao4bs+MGKTK8jTJnt45p3ncm3JfQeqg==
+rw-api-microservice-node@^3.2.1:
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/rw-api-microservice-node/-/rw-api-microservice-node-3.2.1.tgz#cc50089e7073606c83769a2c5f02f4b0d7e0738f"
+  integrity sha512-KdWxB4Mgq1yGNZcb6sKTQkZx/0V2dCopBm65b3qtlUOGnWdtWcp1WSpZQNFKEr3TU+Iyma01l0Gomw8341QBMA==
   dependencies:
-    axios "^0.21.0"
+    axios "^0.21.1"
+    fastly-promises tiagojsag/fastly-promises#master
 
 rw-doc-importer-messages@1.5.0:
   version "1.5.0"
