@@ -1708,8 +1708,14 @@ fast-levenshtein@^2.0.6:
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz#3d8a5c66883a16a30ca8643e851f19baa7797917"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
 
+<<<<<<< HEAD
 "fastly-promises@github:tiagojsag/fastly-promises#master":
   version "0.0.0-semantically-released"
+=======
+fastly-promises@tiagojsag/fastly-promises#master:
+  version "0.0.0-semantically-released"
+  uid "14470364f0d4e62b8ff99c8f7e7dd7cb27039242"
+>>>>>>> dev
   resolved "https://codeload.github.com/tiagojsag/fastly-promises/tar.gz/14470364f0d4e62b8ff99c8f7e7dd7cb27039242"
   dependencies:
     axios "0.21.1"
@@ -2409,9 +2415,9 @@ inherits@2, inherits@2.0.4, inherits@~2.0.1, inherits@~2.0.3:
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
 ini@^1.3.4, ini@^1.3.5, ini@~1.3.0:
-  version "1.3.5"
-  resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.5.tgz#eee25f56db1c9ec6085e0c22778083f596abf927"
-  integrity sha512-RZY5huIKCMRWDUqZlEi72f/lmXKMvuszcMBduliQ3nnWbx9X/ZBQO7DijMEYS9EhHBb2qacRUMtC7svLwe0lcw==
+  version "1.3.8"
+  resolved "https://registry.yarnpkg.com/ini/-/ini-1.3.8.tgz#a29da425b48806f34767a4efce397269af28432c"
+  integrity sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==
 
 internal-slot@^1.0.2:
   version "1.0.2"
@@ -4543,10 +4549,17 @@ rimraf@~3.0.2:
   dependencies:
     glob "^7.1.3"
 
+<<<<<<< HEAD
 rw-api-microservice-node@^3.2.1:
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/rw-api-microservice-node/-/rw-api-microservice-node-3.2.1.tgz#cc50089e7073606c83769a2c5f02f4b0d7e0738f"
   integrity sha512-KdWxB4Mgq1yGNZcb6sKTQkZx/0V2dCopBm65b3qtlUOGnWdtWcp1WSpZQNFKEr3TU+Iyma01l0Gomw8341QBMA==
+=======
+rw-api-microservice-node@^3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/rw-api-microservice-node/-/rw-api-microservice-node-3.3.0.tgz#826ca96249f1f08aac55b7c9fe9ca3fec0303fcd"
+  integrity sha512-ocvdMuA3WCKWk/Zx9noRQEcmSdc+BP6ClAcmBpWqB5kdIni/4S2R1LpIIKO5rSPjPZye2/LZ33oqvVMI2rSL4w==
+>>>>>>> dev
   dependencies:
     axios "^0.21.1"
     fastly-promises tiagojsag/fastly-promises#master
@@ -5339,9 +5352,9 @@ uri-js@^4.2.2:
     punycode "^2.1.0"
 
 urijs@^1.19.0:
-  version "1.19.2"
-  resolved "https://registry.yarnpkg.com/urijs/-/urijs-1.19.2.tgz#f9be09f00c4c5134b7cb3cf475c1dd394526265a"
-  integrity sha512-s/UIq9ap4JPZ7H1EB5ULo/aOUbWqfDi7FKzMC2Nz+0Si8GiT1rIEaprt8hy3Vy2Ex2aJPpOQv4P4DuOZ+K1c6w==
+  version "1.19.5"
+  resolved "https://registry.yarnpkg.com/urijs/-/urijs-1.19.5.tgz#119683ab4b2fb0bd637e5ea6dd9117bcac68d3e4"
+  integrity sha512-48z9VGWwdCV5KfizHsE05DWS5fhK6gFlx5MjO7xu0Krc5FGPWzjlXEVV0nPMrdVuP7xmMHiPZ2HoYZwKOFTZOg==
 
 urix@^0.1.0:
   version "0.1.0"
