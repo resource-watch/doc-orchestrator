@@ -1,3 +1,7 @@
+## 12/02/2021
+
+- Remove dependency on CT's `authenticated` functionality
+
 ## 14/12/2020
 
 - Replace CT integration library

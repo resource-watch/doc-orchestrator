@@ -24,7 +24,6 @@
     {
       "path": "/v1/doc-importer/task/:task",
       "method": "DELETE",
-      "authenticated": true,
       "redirect": {
         "method": "DELETE",
         "path": "/api/v1/doc-importer/task/:task"
